@@ -69,6 +69,12 @@ journey steps naming an edge that was never declared, missing copy, labels too l
   to a node to assign one; the bookshop example includes icons for all its blocks.
   Icons start off on every load, and atlases without them retain the original look.
   Small roofs fall back to text. Emoji use the system font and work offline.
+- **AWS off / on** shows optional bundled service badges. Add `aws:'lambda'`,
+  `aws:'s3'`, `aws:'rds'`, `aws:'sqs'` or another supported service identifier.
+  These are compact AWS service badges rather than network-loaded image assets,
+  so the single-file artifact stays offline. Keep the field only where the source
+  data confirms the AWS service; the atlas does not infer a vendor from a generic
+  block name.
 
 - Search by block name, description, lane, source path or technology. Matches stay
   bright on the map; select a result (or press Enter) to center it. Clear restores

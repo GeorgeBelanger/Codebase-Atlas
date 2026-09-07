@@ -33,6 +33,10 @@ const G={
   and variation selectors are supported. The validator rejects empty strings,
   multiple emoji, ordinary text and non-string values. AWS assets are not supported
   by this field.
+- `aws` — optional AWS service identifier such as `'lambda'`, `'s3'`, `'rds'`,
+  `'sqs'` or `'api-gateway'`. The viewer bundles compact, offline service badges;
+  it does not fetch external image assets. Enable **AWS OFF / AWS ON** separately
+  from emoji icons. The validator rejects unknown service identifiers.
 
 ## `COPY` — the words, keyed by block id
 ```js

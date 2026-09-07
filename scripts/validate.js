@@ -8,12 +8,15 @@ const {G,N,COPY,E,STEPS,META}=d,err=[],warn=[];
 const ids=new Set(N.map(n=>n.id));
 if(N.length<12||N.length>45)warn.push(`${N.length} blocks — aim for 25-40`);
 const graphemes=new Intl.Segmenter('en',{granularity:'grapheme'});
+const awsServices=new Set(['api-gateway','cloudfront','dynamodb','ecs','eks','lambda','rds','s3','sns','sqs','step-functions','eventbridge','elasticache','fargate']);
 N.forEach(n=>{
   if(!G[n.g])err.push(`${n.id}: unknown lane "${n.g}"`);
   ['w1','h1','f','s'].forEach(k=>{if(!n[k]||!n[k].length)err.push(`${n.id}: missing ${k}`);});
   if(n.icon!==undefined&&(typeof n.icon!=='string'||n.icon.length>32||
       [...graphemes.segment(n.icon)].length!==1||!/[\p{Extended_Pictographic}\p{Regional_Indicator}\u20e3]/u.test(n.icon)))
     err.push(`${n.id}: icon must be a single emoji (or omit it)`);
+  if(n.aws!==undefined&&(typeof n.aws!=='string'||!awsServices.has(n.aws.toLowerCase())))
+    err.push(`${n.id}: aws must name a supported AWS service (or omit it)`);
   const c=COPY[n.id];
   if(!c)return err.push(`${n.id}: no COPY entry`);
   if(c.length!==4)err.push(`${n.id}: COPY needs [label, one-liner, why it matters, if it breaks]`);
