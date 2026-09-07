@@ -14,7 +14,7 @@ const G={
 
 ## `N` — the blocks (25–40)
 ```js
-{id:'parser', c:'P', n:'HTML extractor', g:'ingest',
+{id:'parser', icon:'⚙️', c:'P', n:'HTML extractor', g:'ingest',
  x:8, y:3, w:3, h:2, z:36,
  w1:'What it does, 1-3 plain sentences. No jargon, no class names.',
  h1:'How it is built: the libraries, the one non-obvious decision, the gotcha.',
@@ -24,7 +24,15 @@ const G={
 - `x,y,w,h` — grid footprint. **No two blocks may overlap**; the validator enforces it.
 - `z` — height. Set it from real line count: `z ≈ 18 + lines/28`, capped ~80.
   Height is information: the tallest block must genuinely be the one carrying the most code.
-- `c` — 1–2 char code, shown only when zoomed out.
+- `c` — 1–2 char code, shown when the full label does not fit.
+- `icon` — optional single emoji, such as `'🗄️'`, `'⚙️'` or `'🌐'`. Omit it
+  for the original text-only block. The viewer starts with **Icons off**; enabling
+  icons adds them beside the label (or short code). On very small roofs the icon
+  is omitted so the identifying text remains readable. Emoji appearance depends
+  on the operating system; no images or network requests are needed. Joined emoji
+  and variation selectors are supported. The validator rejects empty strings,
+  multiple emoji, ordinary text and non-string values. AWS assets are not supported
+  by this field.
 
 ## `COPY` — the words, keyed by block id
 ```js

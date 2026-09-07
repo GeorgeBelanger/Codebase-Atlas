@@ -65,6 +65,11 @@ journey steps naming an edge that was never declared, missing copy, labels too l
 
 ## Exploring an atlas
 
+- **Icons off / on** shows optional emoji beside block labels. Add `icon:'⚙️'`
+  to a node to assign one; the bookshop example includes icons for all its blocks.
+  Icons start off on every load, and atlases without them retain the original look.
+  Small roofs fall back to text. Emoji use the system font and work offline.
+
 - Search by block name, description, lane, source path or technology. Matches stay
   bright on the map; select a result (or press Enter) to center it. Clear restores
   the full list. Following a connection outside the results clears the filter.

@@ -185,6 +185,7 @@ button:disabled{opacity:.4;cursor:default}
     <label class="scrubber">Step <input id="scrubber" type="range" min="1" value="1" aria-label="Journey step"><output id="step-position">Not started</output></label>
     <label>Reading pace <select id="pace"><option value="6000">Slow · 6s</option><option value="4000" selected>Normal · 4s</option><option value="2000">Fast · 2s</option></select></label>
     <button class="rbtn" id="toggle-rail" aria-controls="rail" aria-expanded="true">HIDE BLOCKS</button>
+    <button class="rbtn" id="toggle-icons" aria-label="Show block icons" aria-pressed="false">ICONS OFF</button>
     <button class="rbtn" id="toggle-panel" aria-controls="panel" aria-expanded="true">HIDE DETAILS</button>
   </div>
   <div class="body">
@@ -272,6 +273,7 @@ function hex(h,a){const r=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),
 
 let active=new Set(),liveEdge=null,liveT=0,step=-1,playing=false;
 let matches=null,hoverEdge=null,selectedEdge=null;
+let showIcons=false;
 
 function draw(){
   ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -406,8 +408,25 @@ function block(n,focus){
   ctx.fillStyle=TK.parchHex;
   const fs=Math.max(11,11*cam.s);
   ctx.font=fs+'px ui-monospace,Menlo,monospace';
-  const label=(n.d&&ctx.measureText(n.d).width<wide-14)?n.d:n.c;
-  if(cam.s>.34)ctx.fillText(label,cx,cy);
+  const available=wide-14;
+  const iconSize=Math.max(14,Math.min(22,18*cam.s));
+  const iconFont=iconSize+'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+  let iconWidth=0;
+  if(showIcons&&typeof n.icon==='string'&&n.icon){
+    ctx.save();ctx.font=iconFont;iconWidth=ctx.measureText(n.icon).width;ctx.restore();
+    // Keep the identifying code visible even on small roofs.
+    if(iconWidth+5+ctx.measureText(n.c).width>available)iconWidth=0;
+  }
+  const gap=iconWidth?5:0;
+  const label=(n.d&&ctx.measureText(n.d).width+iconWidth+gap<available)?n.d:n.c;
+  if(cam.s>.34){
+    const textWidth=ctx.measureText(label).width;
+    if(iconWidth){
+      const start=cx-(iconWidth+gap+textWidth)/2;
+      ctx.save();ctx.font=iconFont;ctx.fillText(n.icon,start+iconWidth/2,cy);ctx.restore();
+      ctx.fillText(label,start+iconWidth+gap+textWidth/2,cy);
+    }else ctx.fillText(label,cx,cy);
+  }
   if(num)LATE.push(()=>{
     const p=T[0];
     ctx.beginPath();ctx.arc(p.x,p.y,9,0,6.284);ctx.fillStyle=TK.coralHex;ctx.fill();
@@ -523,6 +542,15 @@ function choose(id,center){
 const cap=document.getElementById('cap'),capnum=document.getElementById('capnum'),captxt=document.getElementById('captxt'),capch=document.getElementById('capch'),capbar=document.getElementById('capbar');
 const btnRun=document.getElementById('btn-run');
 let stepStart=0,pausedElapsed=0,complete=false;
+const iconToggle=document.getElementById('toggle-icons');
+iconToggle.disabled=!N.some(n=>typeof n.icon==='string'&&n.icon);
+iconToggle.title=iconToggle.disabled?'No block icons in this atlas':'Show optional emoji beside block labels';
+iconToggle.addEventListener('click',()=>{
+  showIcons=!showIcons;
+  iconToggle.setAttribute('aria-pressed',String(showIcons));
+  iconToggle.textContent=showIcons?'ICONS ON':'ICONS OFF';
+  draw();
+});
 const scrubber=document.getElementById('scrubber'),pace=document.getElementById('pace');
 scrubber.max=STEPS.length;
 const chapterRail=document.getElementById('chapters');
