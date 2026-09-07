@@ -63,6 +63,22 @@ python3 scripts/build.py    atlas.data.js atlas.html theme.css
 screenshot: blocks whose footprints overlap, edges pointing at blocks that do not exist,
 journey steps naming an edge that was never declared, missing copy, labels too long to fit.
 
+## Exploring an atlas
+
+- Search by block name, description, lane, source path or technology. Matches stay
+  bright on the map; select a result (or press Enter) to center it. Clear restores
+  the full list. Following a connection outside the results clears the filter.
+- Hide the block list or detail panel for more map space. **Fit all** changes only
+  the camera; **Focus neighbors** fits the selected block and its connections.
+- Walk with **Previous / Next**, jump to a chapter, or scrub to a specific step.
+  Playback offers 2, 4 or 6 seconds per step and preserves progress when paused.
+  **Restart journey** returns to the first step without starting playback.
+- Static arrows show connection direction. Hover or click an exposed line to read
+  its source and destination; the current journey connection is labeled too.
+  Relationship types are not inferred from the existing endpoint-only data.
+- Space plays/pauses and arrow keys walk the journey when focus is outside a
+  control. Inputs, buttons and the pace selector retain their normal key behavior.
+
 ## Themes
 
 Two are bundled. Foundry is the built-in default; pass a theme file to use the other one,
