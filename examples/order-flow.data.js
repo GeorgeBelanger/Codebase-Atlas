@@ -5,16 +5,17 @@
    Build it:  python3 ../scripts/build.py order-flow.data.js atlas.html ../themes/drafting.css */
 
 const META={
+  source:{fictional:true,generatedAt:'2026-09-07T00:00:00Z'},
   title:'Northgate Order Flow',
   name:'Northgate', tag:'Order Flow',
   run:'▶ FOLLOW ONE ORDER',
-  stats:[['MOVING PARTS','#blocks'],['STEPS IN ONE ORDER','#steps'],
-         ['LINES OF CODE BEHIND IT','41,200'],['ORDERS PER DAY','7,400']],
+  stats:[['MOVING PARTS','#blocks'],['JOURNEY STEPS','#steps'],
+         ['MAPPED LINES','#lines'],['MAPPED FILES','#files']],
   legend:['TALLER = MORE CODE','LINE = A PATH AN ORDER TAKES','MOVING MARK = ONE ORDER'],
   chapters:[[0,'BROWSE'],[2,'CHECKOUT'],[5,'ORDER'],[7,'WAREHOUSE'],[9,'DELIVERY']],
   intro:{eyebrow:'THE WHOLE THING', h:'One order, end to end',
     p:['Somebody searches for a book, puts it in a basket and pays. Eighteen minutes later a picker in Leeds is holding it. The next morning it is on a doorstep.',
-       'This map is the machinery between those moments. Every block is a real part of it.']},
+       'Northgate is fictional. This map demonstrates an illustrative architecture; source paths, line counts and AWS mappings are examples.']},
   key:[['Taller block','more code inside it'],['Colour','which part of the business it serves'],
        ['Line on the floor','a path an order really takes'],['Moving mark','one order in flight']],
   movementsLabel:'THE FIVE MOVEMENTS',
@@ -107,7 +108,7 @@ const N=[
  {id:'web',icon:'🌐',c:'P1',n:'Website',g:'platform',x:12,y:11,w:3,h:2,z:40,
   w1:'The shop itself: pages, sessions, and everything a customer can click.',
   h1:'Server-rendered pages with islands of client code. Rendering budget is 200 ms at the 95th percentile, enforced in CI.',
-  f:[['web/app.py',870],['web/pages/',1200]],s:['server rendered','p95 budget']},
+  f:[['web/app.py',870],['web/pages.py',1200]],s:['server rendered','p95 budget']},
  {id:'auth',icon:'🔑',c:'P2',n:'Accounts',g:'platform',x:8,y:11,w:3,h:2,z:24,
   w1:'Sign-in, sessions and the address book.',
   h1:'Sessions in a signed cookie, addresses validated against a postcode service on save rather than at checkout.',
@@ -131,7 +132,7 @@ const N=[
  {id:'db',icon:'🗄️',aws:'rds',c:'R1',n:'Database',g:'records',x:28,y:12,w:3,h:2,z:44,
   w1:'Orders, payments, stock movements, customers. The business, written down.',
   h1:'One primary, two replicas. Reads that can tolerate a second of staleness go to a replica; anything that decides money does not.',
-  f:[['db/models.py',1400],['db/migrations/',2100]],s:['primary + replicas','read routing']},
+  f:[['db/models.py',1400],['db/migrations.py',2100]],s:['primary + replicas','read routing']},
  {id:'audit',icon:'📜',c:'R2',n:'Audit log',g:'records',x:32,y:8,w:3,h:2,z:20,
   w1:'Who changed what, when, and what it looked like before.',
   h1:'Append only, written in the same transaction as the change. If the audit write fails, the change fails.',
@@ -246,4 +247,33 @@ const STEPS=[
  ['carrier','Weight and postcode choose the carrier. The collection is booked before the evening cut-off.',['pack','carrier']],
  ['tracking','A tracking number comes back and the parcel starts being watched for silence.',['carrier','tracking']],
  ['notify','The customer is told it is on the way, and the money is captured at last.',['tracking','notify']]
+];
+
+// These scenarios and relationship classifications are illustrative, not measured.
+E.push(['payments','jobs',0]);
+E.forEach(e=>e[3]={
+  kind:e[0]==='db'?'read':['db','audit'].includes(e[1])?'write':
+    ['events','jobs'].includes(e[0])||e[1]==='jobs'?'event':'call',
+  status:'fictional'
+});
+N.forEach(n=>{
+  n.status='fictional';
+  n.z=Math.round(Math.min(80,18+n.f.reduce((sum,f)=>sum+f[1],0)/28)*10)/10;
+});
+const JOURNEYS=[
+  {id:'order',name:'Place an order',steps:STEPS,chapters:META.chapters,done:META.done},
+  {id:'retry',name:'Payment retry',chapters:[[0,'RETRY'],[3,'RECOVER']],
+   steps:[
+    ['jobs','A queued payment job is ready for processing.',null],
+    ['payments','The provider processes the request, but its acknowledgement times out.',['jobs','payments']],
+    ['jobs','The failed acknowledgement queues the same job for another attempt.',['payments','jobs']],
+    ['payments','The retry uses the same event ID and returns the recorded result without charging again.',['jobs','payments']],
+    ['audit','The completed payment attempt is recorded for later reconciliation.',['payments','audit']]
+   ],done:'The job was retried and the payment handler was visited twice. The customer was charged once.'},
+  {id:'notification',name:'Background notification',chapters:[[0,'EVENT'],[1,'DELIVER']],
+   steps:[
+    ['events','An order update becomes available to background consumers.',null],
+    ['jobs','A worker claims the notification task from the event stream.',['events','jobs']],
+    ['notify','The mailer deduplicates and delivers the customer update.',['jobs','notify']]
+   ],done:'The customer update was delivered asynchronously.'}
 ];

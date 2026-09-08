@@ -51,13 +51,22 @@ const STEPS = [ … ]   // the journey, one caption per step
 const META  = { … }   // title, stats, chapters, opening panel
 ```
 
+For new atlases, save the same fields as `atlas.data.json` with `schemaVersion: 2`.
+JSON is safe to parse and is the format used by the bundled example; legacy JavaScript is
+kept only for compatibility with existing trusted datasets.
+
 Then:
 
 ```bash
-node   scripts/validate.js  atlas.data.js               # free correctness check
-python3 scripts/build.py    atlas.data.js atlas.html theme.css
+node   scripts/validate.js  atlas.data.json             # free correctness check
+python3 scripts/build.py    atlas.data.json atlas.html theme.css
        scripts/shoot.sh     atlas.html                  # 3 viewports, kills its own server
 ```
+
+Pass `--repo path/to/repository` to `validate.js` or `build.py` when the data includes
+real file evidence. The repository must be clean and at the declared commit; the command
+measures mapped files, expands directory references, checks evidence ranges, and records a
+fresh inventory. Fictional or inferred data can be built without a repository.
 
 `validate.js` catches the mistakes that are invisible in code and expensive to find in a
 screenshot: blocks whose footprints overlap, edges pointing at blocks that do not exist,
@@ -85,8 +94,9 @@ journey steps naming an edge that was never declared, missing copy, labels too l
   Playback offers 2, 4 or 6 seconds per step and preserves progress when paused.
   **Restart journey** returns to the first step without starting playback.
 - Static arrows show connection direction. Hover or click an exposed line to read
-  its source and destination; the current journey connection is labeled too.
-  Relationship types are not inferred from the existing endpoint-only data.
+  its source, destination, relationship kind, confidence and evidence; the current journey
+  connection is labeled too. Named journeys appear in a selector, and repeated visits keep
+  their visit numbers after playback.
 - Space plays/pauses and arrow keys walk the journey when focus is outside a
   control. Inputs, buttons and the pace selector retain their normal key behavior.
 

@@ -21,5 +21,7 @@ The map is isometric: `screen.x = (x-y)·31`, `screen.y = (x+y)·15.5 − z`. Tw
 
 ## Heights
 
-`z ≈ 18 + lines/28`, capped around 80. The tallest block should be the one you would
-warn a new engineer about first. If your tallest block is a config file, your heights lie.
+`z` is derived by the normalizer as `round(min(80, 18 + lines/28), 1)`, where `lines` is
+the deduplicated sum of the block's mapped files. The tallest block should be the one you
+would warn a new engineer about first. If your tallest block is a config file, your heights
+lie. This keeps geometry and the `#lines`/`#files` totals tied to one source of truth.

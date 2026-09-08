@@ -16,7 +16,9 @@ engine, the interactions, the responsive shell and the fixes for every trap list
 
 ## Token discipline — the first constraint, not the last
 
-- **Never spawn subagents. Never install anything** (no npx, npm, pip). Everything needed is bundled.
+- **Never install anything while mapping a target repository.** The optional repository-level
+  regression suite uses pinned development dependencies in CI; the atlas artifact itself has
+  no runtime dependencies or network calls.
 - **Never read a source file in full.** `scripts/recon.sh` plus one grep for definitions is the whole budget.
 - **Never print the data file or the built page into the chat.**
 - Write `atlas.data.js` in ONE Write call. Later changes are surgical `python3 - <<'PY'` replacements.
@@ -38,7 +40,8 @@ if they exist — they carry the gotchas and any design tokens. That is all the 
 nightly job, a build, an order, a message. Find it in the code, not in your imagination.
 It becomes 10–16 steps. If you cannot name it, ask the user before building anything.
 
-**3 · Write `atlas.data.js`.** Schema and rules: `reference/schema.md`.
+**3 · Write `atlas.data.json`.** JSON is preferred because it cannot execute code. Existing
+  trusted `atlas.data.js` files remain supported. Schema and rules: `reference/schema.md`.
 Copy rules — this is where the value is, not the graphics: `reference/copy.md`.
 Grid layout without overlaps: `reference/layout.md`.
 
@@ -49,8 +52,8 @@ from them. See `reference/theme.md`.
 
 **5 · Build, validate, look.**
 ```bash
-node    $SKILL/scripts/validate.js atlas.data.js            # free; fix everything it reports
-python3 $SKILL/scripts/build.py    atlas.data.js atlas.html $SKILL/themes/foundry.css
+node    $SKILL/scripts/validate.js atlas.data.json          # free; fix everything it reports
+python3 $SKILL/scripts/build.py    atlas.data.json atlas.html $SKILL/themes/foundry.css
         $SKILL/scripts/shoot.sh    atlas.html               # 3 viewports, kills its own server
 ```
 Read the three screenshots. Check: no lane label sitting on a block, no block covering a

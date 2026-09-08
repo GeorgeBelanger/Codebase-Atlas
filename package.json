@@ -1,0 +1,12 @@
+{
+  "name": "codebase-atlas",
+  "private": true,
+  "description": "Development checks for the self-contained Codebase Atlas viewer",
+  "scripts": {
+    "test": "node --test tests/data.test.js && python3 -m unittest discover -s tests -p 'test_*.py' -v",
+    "test:browser": "node tests/browser-smoke.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

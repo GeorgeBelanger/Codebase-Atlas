@@ -163,6 +163,11 @@ button:disabled{opacity:.4;cursor:default}
 .caption{padding-bottom:58px}.caption.on~.zoom{bottom:12px}
 .edge-info{position:absolute;top:52px;left:16px;right:16px;width:fit-content;max-width:calc(100% - 32px);padding:8px 12px;background:var(--plate);border:1px solid var(--rule);font:12px/1.5 var(--mono);pointer-events:none}
 .edge-info[hidden]{display:none}
+.provenance{padding:12px;border:1px solid var(--rule);font:12px/1.6 var(--mono);color:var(--stone);margin:0 0 20px;overflow-wrap:anywhere}
+.evidence{padding:7px 0;font:12px/1.6 var(--mono);color:var(--stone);overflow-wrap:anywhere}
+.evidence summary{cursor:pointer;color:var(--parch)}
+.evidence a,.provenance a,.file a{color:var(--parch);text-underline-offset:3px}
+.visit-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -181,6 +186,7 @@ button:disabled{opacity:.4;cursor:default}
   </header>
 
   <div class="journey" aria-label="Journey controls">
+    <label id="journey-picker">Journey <select id="journey-select" aria-label="Journey"></select></label>
     <div class="chapters" id="chapters" aria-label="Jump to chapter"></div>
     <label class="scrubber">Step <input id="scrubber" type="range" min="1" value="1" aria-label="Journey step"><output id="step-position">Not started</output></label>
     <label>Reading pace <select id="pace"><option value="6000">Slow · 6s</option><option value="4000" selected>Normal · 4s</option><option value="2000">Fast · 2s</option></select></label>
@@ -219,7 +225,8 @@ button:disabled{opacity:.4;cursor:default}
 /*__DATA__*/
 
 N.forEach(n=>{const x=COPY[n.id];if(x){n.d=x[0];n.t=x[1];n.s1=x[2];n.s2=x[3];}});
-const CH=(typeof META!=='undefined'&&META.chapters)?META.chapters:[[0,'START']];
+const journeys=typeof JOURNEYS!=='undefined'&&JOURNEYS.length?JOURNEYS:[{id:'default',name:META.tag,steps:STEPS,chapters:META.chapters,done:META.done}];
+let journey=journeys[0],journeySteps=journey.steps,CH=journey.chapters?.length?journey.chapters:[[0,'START']];
 const chapterOf=i=>{let c=CH[0][1];for(const k of CH)if(i>=k[0])c=k[1];return c;};
 let visited={};
 function related(id){const s=new Set([id]);E.forEach(e=>{if(e[0]===id)s.add(e[1]);if(e[1]===id)s.add(e[0]);});return s;}
@@ -347,7 +354,7 @@ function pickEdge(pt){
 }
 function showEdge(){
   const e=hoverEdge||selectedEdge||liveEdge,el=document.getElementById('edge-info');
-  el.hidden=!e;if(e)el.textContent=byId[e[0]].n+' → '+byId[e[1]].n;
+  el.hidden=!e;if(e)el.textContent=byId[e[0]].n+' → '+byId[e[1]].n+' · '+(e[3]?.kind||'dependency')+' · '+(e[3]?.status||'inferred');
 }
 function centerNode(id){
   const n=byId[id],c=ctr(n),p=iso(c.x,c.y,n.z/2);
@@ -446,12 +453,15 @@ function block(n,focus){
       ctx.fillStyle='#fff';ctx.font='600 '+Math.max(8,9*cam.s)+'px ui-monospace,Menlo,monospace';ctx.textAlign='center';ctx.fillText(awsBadge[0],ax+awsWidth/2,cy+.5);ctx.restore();
     }
   }
-  if(num)LATE.push(()=>{
+  if(num?.length)LATE.push(()=>{
     const p=T[0];
-    ctx.beginPath();ctx.arc(p.x,p.y,9,0,6.284);ctx.fillStyle=TK.coralHex;ctx.fill();
+    const label=num.length<=2?num.join(','):num[0]+'…'+num.at(-1);
+    ctx.font='600 9px ui-monospace,Menlo,monospace';
+    const radius=Math.max(9,ctx.measureText(label).width/2+5);
+    ctx.beginPath();ctx.ellipse(p.x,p.y,radius,9,0,0,6.284);ctx.fillStyle=TK.coralHex;ctx.fill();
     ctx.strokeStyle=TK.groundHex;ctx.lineWidth=1.5;ctx.stroke();
     ctx.fillStyle=TK.groundHex;ctx.font='600 9px ui-monospace,Menlo,monospace';
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(num),p.x,p.y+.5);
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,p.x,p.y+.5);
   });
   if(isSel||isHov)LATE.push(()=>{
     const t=n.n.toUpperCase(),sub=n.t||'';
@@ -477,24 +487,48 @@ function pick(pt){const o=[...N].sort((a,b)=>(b.x+b.y)-(a.x+a.y));
 
 /* ---------- panel + rail ---------- */
 const rail=document.getElementById('rail'),pbody=document.getElementById('pbody');
+const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Allow only simple formatting without attributes; everything else remains text.
+const rich=value=>esc(value).replace(/&lt;(\/?(?:strong|em|code|br))\s*\/?&gt;/gi,'<$1>');
+function sourceLink(path,start,end){
+  const source=META.source||{};
+  if(source.fictional||!source.repository||!source.commit)return null;
+  try{
+    const url=new URL(source.repository);
+    if(url.protocol!=='https:'||url.hostname!=='github.com'||url.username||url.password||!/^\/[\w.-]+\/[\w.-]+\/?$/.test(url.pathname))return null;
+    const root=url.origin+url.pathname.replace(/\.git\/?$/,'').replace(/\/$/,'');
+    return root+'/blob/'+encodeURIComponent(source.commit)+'/'+path.split('/').map(encodeURIComponent).join('/')+(start?'#L'+start+(end&&end!==start?'-L'+end:''):'');
+  }catch{return null;}
+}
+function evidenceHTML(items=[]){
+  return items.map(e=>{
+    const url=sourceLink(e.path,e.startLine,e.endLine),label=e.path+':'+e.startLine+(e.endLine?'-'+e.endLine:'');
+    return `<div class="evidence">${url?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>`:esc(label)}${e.symbol?' · '+esc(e.symbol):''}</div>`;
+  }).join('');
+}
+function provenanceHTML(){
+  const s=META.source||{},m=META.metrics||{};
+  const status=s.fictional?'Fictional example · architecture, vendors and metrics are illustrative':s.freshness==='stale'?'Source snapshot is stale':s.commit?'Source snapshot · '+s.commit.slice(0,12):'Source snapshot not recorded';
+  return `<div class="provenance">${esc(status)}${s.generatedAt?'<br>Generated '+esc(s.generatedAt):''}${s.dirty?'<br>Includes uncommitted working-tree changes':''}${m.mappedLines!==undefined?'<br>'+Number(m.mappedLines).toLocaleString()+' mapped lines across '+Number(m.mappedFiles).toLocaleString()+' files':''}${m.repositoryLines!==undefined?'<br>'+Number(m.repositoryLines).toLocaleString()+' repository text lines (inventory scope)':''}</div>`;
+}
 let tab='what';
 const groups=[...new Set(N.map(n=>n.g))];
 rail.innerHTML='<div class="search"><input id="q" type="search" placeholder="Search blocks or files" aria-label="Filter blocks"><div class="search-status"><span id="result-count" role="status"></span><button id="clear-search" type="button">Clear</button></div></div>'+groups.map(g=>{
   const items=N.filter(n=>n.g===g);
-  return `<div class="ghead" data-g="${g}"><span>${G[g].n.toUpperCase()}</span><span>${items.length}</span></div>`+
-   items.map(n=>`<button class="item" data-g="${g}" data-name="${(n.n+' '+(n.t||'')).toLowerCase()}" data-id="${n.id}"><span class="dot" style="background:${G[g].c}"></span><em>${n.n}</em></button>`).join('');
+  return `<div class="ghead" data-g="${esc(g)}"><span>${esc(G[g].n.toUpperCase())}</span><span>${items.length}</span></div>`+
+   items.map(n=>`<button class="item" data-g="${esc(g)}" data-id="${esc(n.id)}"><span class="dot" style="background:${esc(G[g].c)}"></span><em>${esc(n.n)}</em></button>`).join('');
 }).join('');
 const q=document.getElementById('q');
-const searchIndex=new Map(N.map(n=>[n.id,[n.n,n.t,G[n.g].n,...n.f.map(f=>f[0]),...n.s].join(' ').toLowerCase()]));
+const searchIndex=new Map(N.map(n=>[n.id,[n.n,n.t,G[n.g].n,n.aws,...n.f.map(f=>f[0]),...n.s].join(' ').toLowerCase()]));
 function filterBlocks(){
   const v=q.value.trim().toLowerCase();
   matches=v?new Set(N.filter(n=>searchIndex.get(n.id).includes(v)).map(n=>n.id)):null;
   groups.forEach(g=>{
     let count=0;
-    rail.querySelectorAll('.item[data-g="'+g+'"]').forEach(b=>{
+    rail.querySelectorAll('.item').forEach(b=>{if(b.dataset.g!==g)return;
       const hit=!matches||matches.has(b.dataset.id);b.style.display=hit?'':'none';if(hit)count++;
     });
-    const h=rail.querySelector('.ghead[data-g="'+g+'"]');if(h)h.style.display=count?'':'none';
+    const h=[...rail.querySelectorAll('.ghead')].find(el=>el.dataset.g===g);if(h)h.style.display=count?'':'none';
   });
   document.getElementById('result-count').textContent=(matches?matches.size:N.length)+' of '+N.length+' blocks';
   document.getElementById('clear-search').disabled=!v;
@@ -515,35 +549,42 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
 
 function render(){
   if(!sel){
-    pbody.innerHTML=`<div class="eyebrow" style="color:var(--stone)">${META.intro.eyebrow}</div>
-      <h2>${META.intro.h}</h2>
-      <div class="prose">${META.intro.p.map(t=>`<p>${t}</p>`).join('')}</div>
+    pbody.innerHTML=`${provenanceHTML()}<div class="eyebrow" style="color:var(--stone)">${esc(META.intro.eyebrow)}</div>
+      <h2>${esc(META.intro.h)}</h2>
+      <div class="prose">${META.intro.p.map(t=>`<p>${rich(t)}</p>`).join('')}</div>
       <div class="lbl">HOW TO READ THE MAP</div>
-      ${META.key.map(k=>`<div class="file"><span style="color:var(--stone)">${k[0]}</span><span>${k[1]}</span></div>`).join('')}
-      <div class="lbl">${META.movementsLabel}</div>
-      <div class="big">${META.movements.map(m=>`<button data-go="${m[2]}"><b>${m[0]}</b><span>${m[1]}</span></button>`).join('')}</div>
-      <div class="prose"><p style="color:var(--stone);font-size:14px">${META.cta}</p></div>`;
+      ${META.key.map(k=>`<div class="file"><span style="color:var(--stone)">${esc(k[0])}</span><span>${esc(k[1])}</span></div>`).join('')}
+      <div class="lbl">${esc(META.movementsLabel)}</div>
+      <div class="big">${META.movements.map(m=>`<button data-go="${esc(m[2])}"><b>${esc(m[0])}</b><span>${esc(m[1])}</span></button>`).join('')}</div>
+      <div class="prose"><p style="color:var(--stone);font-size:14px">${rich(META.cta)}</p></div>`;
     pbody.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>inspect(b.dataset.go)));
     return;}
   const n=byId[sel],c=G[n.g].c;
-  const nb=E.filter(e=>e[0]===n.id||e[1]===n.id).map(e=>e[0]===n.id?['sends to',e[1]]:['fed by',e[0]]);
+  const nb=E.filter(e=>e[0]===n.id||e[1]===n.id);
   if(tab==='what'){
-    pbody.innerHTML=`<div class="eyebrow" style="color:${c}"><span class="dot" style="background:${c};width:7px;height:7px;display:inline-block"></span>${G[n.g].n.toUpperCase()}</div>
-      <h2>${n.n}</h2><div class="sub">${(n.t||'').toUpperCase()}</div>
-      <div class="prose"><p>${n.w1}</p></div>
-      <div class="why"><h4>WHY IT MATTERS</h4><p>${n.s1||''}</p></div>
-      <div class="why risk"><h4>IF IT BREAKS</h4><p>${n.s2||''}</p></div>
+    pbody.innerHTML=`<div class="eyebrow" style="color:${esc(c)}"><span class="dot" style="background:${esc(c)};width:7px;height:7px;display:inline-block"></span>${esc(G[n.g].n.toUpperCase())}</div>
+      <h2>${esc(n.n)}</h2><div class="sub">${esc((n.t||'').toUpperCase())}</div>
+      <div class="prose"><p>${rich(n.w1)}</p></div>
+      <div class="why"><h4>WHY IT MATTERS</h4><p>${rich(n.s1)}</p></div>
+      <div class="why risk"><h4>IF IT BREAKS</h4><p>${rich(n.s2)}</p></div>
       <div class="lbl">CONNECTED TO</div><div class="links">
-      ${nb.map(([k,id])=>`<button class="link" data-go="${id}"><i>${k}</i> ${byId[id].n}</button>`).join('')||'<div class="file">nothing yet</div>'}
+      ${nb.map(e=>{
+        const id=e[0]===n.id?e[1]:e[0],direction=e[0]===n.id?'sends to':'fed by',meta=e[3]||{};
+        return `<button class="link" data-go="${esc(id)}"><i>${direction}</i> ${esc(byId[id].n)}</button><details class="evidence"><summary>${esc(meta.kind||'dependency')} · ${esc(meta.status||'inferred')}</summary>${meta.evidence?.length?evidenceHTML(meta.evidence):'No source evidence recorded.'}</details>`;
+      }).join('')||'<div class="file">No connections declared</div>'}
       </div>`;
   }else{
-    pbody.innerHTML=`<div class="eyebrow" style="color:${c}">HOW IT'S BUILT</div>
-      <h2>${n.n}</h2><div class="sub">BLOCK ${n.c} · HEIGHT ${n.z} ON THE MAP</div>
-      <div class="prose"><p>${n.h1}</p></div>
+    pbody.innerHTML=`${provenanceHTML()}<div class="eyebrow" style="color:${esc(c)}">HOW IT'S BUILT · ${esc(n.status||'inferred')}</div>
+      <h2>${esc(n.n)}</h2><div class="sub">${Number(n.lines??n.f.reduce((sum,f)=>sum+f[1],0)).toLocaleString()} MAPPED LINES · HEIGHT ${esc(n.z)}</div>
+      <div class="prose"><p>${rich(n.h1)}</p></div>
       <div class="lbl">SOURCE</div>
-      ${n.f.map(([p,l])=>`<div class="file"><span style="color:var(--stone)">${p}</span><span>${l?l+' lines':'—'}</span></div>`).join('')}
-      <div class="lbl">STACK</div><div class="chips">${n.aws&&AWS_BADGES[n.aws.toLowerCase()]?`<span class="chip">AWS ${AWS_BADGES[n.aws.toLowerCase()][1]}</span>`:''}${n.s.map(x=>`<span class="chip">${x}</span>`).join('')}</div>`;
+      ${n.f.map(([p,l])=>{const url=sourceLink(p);return `<div class="file">${url?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(p)}</a>`:`<span style="color:var(--stone)">${esc(p)}</span>`}<span>${Number(l).toLocaleString()} lines</span></div>`;}).join('')}
+      ${n.evidence?.length?'<div class="lbl">EVIDENCE</div>'+evidenceHTML(n.evidence):''}
+      <div class="lbl">STACK</div><div class="chips">${n.aws&&AWS_BADGES[n.aws.toLowerCase()]?`<span class="chip">AWS ${AWS_BADGES[n.aws.toLowerCase()][1]}</span>`:''}${n.s.map(x=>`<span class="chip">${esc(x)}</span>`).join('')}</div>`;
   }
+  const visits=journeySteps.map((st,i)=>st[0]===sel?i:-1).filter(i=>i>=0);
+  if(visits.length)pbody.innerHTML+=`<div class="lbl">VISITS IN ${esc(journey.name)}</div><div class="visit-list">${visits.map(i=>`<button class="rbtn" data-visit="${i}">STEP ${i+1}</button>`).join('')}</div>`;
+  pbody.querySelectorAll('[data-visit]').forEach(b=>b.addEventListener('click',()=>{stop();goStep(Number(b.dataset.visit));}));
   pbody.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>inspect(b.dataset.go)));
 }
 
@@ -580,12 +621,26 @@ awsToggle.addEventListener('click',()=>{
   draw();
 });
 const scrubber=document.getElementById('scrubber'),pace=document.getElementById('pace');
-scrubber.max=STEPS.length;
+scrubber.max=journeySteps.length;
 const chapterRail=document.getElementById('chapters');
-CH.forEach(([i,name])=>{const b=document.createElement('button');b.className='rbtn';b.textContent=name;b.dataset.step=i;b.addEventListener('click',()=>{stop();goStep(i);});chapterRail.append(b);});
+function renderChapters(){
+  chapterRail.replaceChildren();
+  CH.forEach(([i,name])=>{const b=document.createElement('button');b.className='rbtn';b.textContent=name;b.dataset.step=i;b.addEventListener('click',()=>{stop();goStep(i);});chapterRail.append(b);});
+}
+renderChapters();
+const journeySelect=document.getElementById('journey-select');
+journeys.forEach(j=>{const o=document.createElement('option');o.value=j.id;o.textContent=j.name;journeySelect.append(o);});
+document.getElementById('journey-picker').hidden=journeys.length<2;
+journeySelect.addEventListener('change',()=>{
+  stop();journey=journeys.find(j=>j.id===journeySelect.value);journeySteps=journey.steps;CH=journey.chapters?.length?journey.chapters:[[0,'START']];
+  step=-1;complete=false;pausedElapsed=0;visited={};active=new Set();sel=null;liveEdge=null;hoverEdge=null;selectedEdge=null;
+  cap.classList.remove('on');scrubber.max=journeySteps.length;renderChapters();syncJourney();renderStats();showEdge();render();fit();
+  document.getElementById('focus-node').disabled=true;
+  rail.querySelectorAll('.item').forEach(b=>{b.classList.remove('sel');b.setAttribute('aria-pressed','false');});
+});
 function syncJourney(){
   scrubber.value=Math.max(1,step+1);
-  document.getElementById('step-position').textContent=step<0?'Not started':(step+1)+' / '+STEPS.length;
+  document.getElementById('step-position').textContent=step<0?'Not started':(step+1)+' / '+journeySteps.length;
   document.getElementById('btn-prev').disabled=step<=0;
   document.getElementById('btn-step').disabled=complete;
   chapterRail.querySelectorAll('button').forEach(b=>{
@@ -593,20 +648,22 @@ function syncJourney(){
   });
 }
 function goStep(i){
-  if(i>=STEPS.length){
+  if(i>=journeySteps.length){
     stop();complete=true;active=new Set();liveEdge=null;
-    capnum.textContent='RUN COMPLETE';capch.textContent='';capbar.style.width='100%';captxt.textContent=META.done;
+    capnum.textContent='RUN COMPLETE';capch.textContent='';capbar.style.width='100%';captxt.textContent=journey.done||META.done;
     syncJourney();showEdge();return;
   }
   complete=false;step=Math.max(0,i);pausedElapsed=0;stepStart=performance.now();
   q.value='';filterBlocks();selectedEdge=null;
-  const [id,txt,edge]=STEPS[step];
-  visited={};for(let k=0;k<=step;k++)visited[STEPS[k][0]]=k+1;
+  const [id,txt,edge]=journeySteps[step];
+  visited={};for(let k=0;k<=step;k++)(visited[journeySteps[k][0]]??=[]).push(k+1);
   active=new Set([id]);liveEdge=edge?E.find(e=>e[0]===edge[0]&&e[1]===edge[1]):null;
   liveT=0;if(liveEdge)active.add(liveEdge[0]);
   choose(id,true);cap.classList.add('on');
-  capnum.textContent=`STEP ${String(step+1).padStart(2,'0')} / ${STEPS.length}`;
-  capch.textContent=chapterOf(step);capbar.style.width=((step+1)/STEPS.length*100)+'%';captxt.textContent=txt;
+  capnum.textContent=`STEP ${String(step+1).padStart(2,'0')} / ${journeySteps.length}`;
+  capch.textContent=chapterOf(step);capbar.style.width=((step+1)/journeySteps.length*100)+'%';
+  const jump=journeySteps[step][3]?.discontinuity;
+  captxt.textContent=(jump?'Transition: '+jump+' — ':'')+txt;
   syncJourney();showEdge();
 }
 function stop(){
@@ -680,12 +737,12 @@ function frame(now){
 function boot(){readTokens();resize();fit();draw();}
 new ResizeObserver(()=>{const r=cv.getBoundingClientRect();if(r.width<2||r.height<2)return;const oldW=W,oldH=H;resize();cam.x+=(W-oldW)/2;cam.y+=(H-oldH)/2;draw();}).observe(cv.parentElement);
 
-document.getElementById('legend').innerHTML=(META.legend||['TALLER = MORE CODE','LINE = A REAL PATH','MOVING MARK = ONE UNIT OF WORK']).map(t=>`<span>${t}</span>`).join('');
+document.getElementById('legend').innerHTML=(META.legend||['TALLER = MORE CODE','LINE = A REAL PATH','MOVING MARK = ONE UNIT OF WORK']).map(t=>`<span>${esc(t)}</span>`).join('');
 document.getElementById('m-name').textContent=META.name;
 document.getElementById('m-tag').textContent=META.tag;
 document.getElementById('btn-run').textContent=META.run;
-document.getElementById('stats').innerHTML=META.stats.map(st=>{
-  const v=st[1]==='#blocks'?N.length:st[1]==='#steps'?STEPS.length:st[1];
-  return `<div class="stat">${st[0]}<b>${v}</b></div>`;}).join('');
-filterBlocks();syncJourney();render();boot();requestAnimationFrame(frame);
+function renderStats(){document.getElementById('stats').innerHTML=META.stats.map(st=>{
+  const v=st[1]==='#blocks'?N.length:st[1]==='#steps'?journeySteps.length:st[1];
+  return `<div class="stat">${esc(st[0])}<b>${esc(v)}</b></div>`;}).join('');}
+renderStats();filterBlocks();syncJourney();render();boot();requestAnimationFrame(frame);
 </script>

@@ -1,6 +1,11 @@
-# atlas.data.js — the whole schema
+# atlas.data.json — the whole schema
 
-Five top-level consts. Plain JS, no exports. `build.py` inlines the file into the engine.
+JSON is the preferred format. The original plain-JavaScript format is still accepted for
+trusted, hand-authored examples and is normalized to the same versioned shape by
+`scripts/data.js`. `build.py` validates and normalizes before it writes an HTML file.
+
+The top-level object has `schemaVersion: 2` and the same seven fields used by the renderer:
+`G`, `N`, `COPY`, `E`, `STEPS`, `JOURNEYS`, and `META`.
 
 ## `G` — the lanes (5–8 of them)
 ```js
@@ -51,12 +56,13 @@ See `copy.md`. These four strings are the reason anyone keeps the page open.
 
 ## `E` — the edges
 ```js
-const E=[ ['sched','runner',1], ['llm','script',0] ];
+const E=[ ['sched','runner',1,{kind:'call',status:'verified',evidence:[{path:'src/run.js',startLine:12,endLine:20}]}], ['llm','script',0] ];
 //         from     to      ^1 = part of the main journey (gets an ambient moving mark)
+//         metadata is optional; kind is call, event, read, write or dependency
 ```
 Only real paths. If you cannot point at the call, leave the line out.
 
-## `STEPS` — the journey (10–16)
+## `STEPS` and `JOURNEYS` — journeys (10–16 steps each)
 ```js
 const STEPS=[
  ['sched','06:40 local time. The scheduler fires this account job.', null],
@@ -64,6 +70,11 @@ const STEPS=[
 ];
 //  ^block  ^caption in plain words, what just happened               ^the edge to animate (must exist in E)
 ```
+
+Use `JOURNEYS` for more than one user-visible flow. Each entry is
+`{id,name,steps,chapters,done}`. A step may include a fourth value such as
+`{discontinuity:'Operator restarts the worker'}` when it intentionally jumps between
+blocks without an edge. Repeated block ids are valid and are shown as separate visits.
 
 ## `META` — the chrome
 ```js
@@ -79,9 +90,22 @@ const META={
  legend:['TALLER = MORE CODE','LINE = A PATH AN ORDER TAKES','MOVING MARK = ONE ORDER'], // canvas legend
  chapters:[[0,'BROWSE'],[2,'CHECKOUT'],[5,'ORDER']],   // step index -> chapter name
  cta:'Press <strong>…</strong> to follow one …',
- done:'Closing line shown when the journey finishes.'
+  done:'Closing line shown when the journey finishes.'
 };
 ```
 `'#blocks'` and `'#steps'` are substituted with real counts at boot.
 `chapters` names the phases of the journey in the project's own vocabulary: each entry is
 `[first step index, name]`. `legend` labels the three marks on the canvas.
+
+## Provenance, confidence and metrics
+
+Blocks and edges can carry `status: 'verified' | 'inferred' | 'fictional'` and an
+`evidence` array of `{path,startLine,endLine?,symbol?}` records. A verified record requires
+a full Git commit in `META.source.commit`; the viewer turns GitHub repository + commit data
+into clickable source links. Mark authored examples with `META.source.fictional: true`.
+
+`META.source` may include `repository`, `commit`, `generatedAt`, `freshness` and `dirty`.
+`META.inventory` is the optional complete repository inventory. The normalizer derives
+`META.metrics.mappedLines`, `mappedFiles` and `repositoryLines`, and derives each block's
+`lines` and `z` from its deduplicated file tuples. Prefer `#lines` and `#files` in `META.stats`
+so totals cannot drift from the mapped data.
