@@ -74,14 +74,20 @@ journey steps naming an edge that was never declared, missing copy, labels too l
 
 ## Exploring an atlas
 
+The default **Studio** theme uses a light canvas, soft isometric blocks and rounded
+connections, with a docked journey bar. Set a block's `kind` to `service`, `database`,
+`queue` or `frontend` for rounded blocks, cylinders, stacks or window tiles. Omitted
+kinds keep the service shape. Heights retain the measured ordering with reduced screen
+depth; exact file and line counts remain in the details panel.
+
 - **Icons off / on** shows optional emoji beside block labels. Add `icon:'⚙️'`
   to a node to assign one; the bookshop example includes icons for all its blocks.
   Icons start off on every load, and atlases without them retain the original look.
   Small roofs fall back to text. Emoji use the system font and work offline.
-- **AWS off / on** shows optional bundled service badges. Add `aws:'lambda'`,
+- **AWS off / on** shows optional official AWS architecture icons. Add `aws:'lambda'`,
   `aws:'s3'`, `aws:'rds'`, `aws:'sqs'` or another supported service identifier.
-  These are compact AWS service badges rather than network-loaded image assets,
-  so the single-file artifact stays offline. Keep the field only where the source
+  The original SVG artwork is bundled in the HTML and works offline. Source and
+  attribution are in `assets/aws/README.md`. Keep the field only where the source
   data confirms the AWS service; the atlas does not infer a vendor from a generic
   block name.
 
@@ -102,7 +108,7 @@ journey steps naming an edge that was never declared, missing copy, labels too l
 
 ## Themes
 
-Two are bundled. Foundry is the built-in default; pass a theme file to use the other one,
+Three are bundled. Studio is the built-in default; pass a theme file to use another one,
 or write your own — a theme is ten lines.
 
 ```bash
@@ -111,7 +117,8 @@ python3 scripts/build.py atlas.data.js atlas.html themes/drafting.css
 
 | Theme | Look | Fits | Screenshot |
 |---|---|---|---|
-| **Foundry** *(default)* | oxidised brass on warm black, vermilion accent | pipelines, content systems, anything with a voice | [`screenshots/theme-foundry-default.png`](screenshots/theme-foundry-default.png) |
+| **Studio** *(default)* | cool paper, soft shading, indigo accent | architecture exploration | Build the bundled example without a theme argument |
+| **Foundry** | oxidised brass on warm black, vermilion accent | pipelines, content systems, anything with a voice | [`screenshots/theme-foundry-default.png`](screenshots/theme-foundry-default.png) |
 | **Drafting** | ink on paper, graphite lines, deep teal accent — the light one | documents, compilers, anything precise | [`screenshots/theme-drafting-light.png`](screenshots/theme-drafting-light.png) |
 
 The canvas reads the same CSS tokens as the page, so the drawing follows the theme instead

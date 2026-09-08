@@ -1,0 +1,8 @@
+/* Studio — a cool, softly shaded architecture canvas. The built-in default. */
+:root{
+  --ground:#F3F5F9; --floor:#E9EEF6; --plate:#FFFFFF; --plate2:#EDF2FA;
+  --brass:#7589A6; --parch:#24334C; --stone:#61718A; --dim:#77859B;
+  --coral:#526CE5; --rule:#DEE5EF;
+  --serif:Inter,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --mono:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+}

@@ -63,6 +63,8 @@ function validateData(d) {
         for (const k of ['n', 'c', 'w1', 'h1'])
             if (!str(n[k]))
                 bad(l + ': missing ' + k);
+        if (n.kind !== undefined && !['service', 'database', 'queue', 'frontend'].includes(n.kind))
+            bad(l + ': kind must be service, database, queue or frontend');
         for (const k of ['x', 'y', 'w', 'h'])
             if (typeof n[k] !== 'number' || !Number.isFinite(n[k]) || (['w', 'h'].includes(k) && n[k] <= 0))
                 bad(l + ': invalid geometry ' + k);

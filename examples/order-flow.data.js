@@ -257,6 +257,7 @@ E.forEach(e=>e[3]={
   status:'fictional'
 });
 N.forEach(n=>{
+  n.kind=n.id==='db'?'database':n.id==='events'?'queue':['web','admin','support'].includes(n.id)?'frontend':'service';
   n.status='fictional';
   n.z=Math.round(Math.min(80,18+n.f.reduce((sum,f)=>sum+f[1],0)/28)*10)/10;
 });

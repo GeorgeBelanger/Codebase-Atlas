@@ -26,6 +26,7 @@ jobs:
       - name: Build both themes
         run: |
           mkdir -p work/browser-smoke
+          python3 scripts/build.py examples/order-flow.data.json work/browser-smoke/atlas-studio.html
           python3 scripts/build.py examples/order-flow.data.json work/browser-smoke/atlas-foundry.html themes/foundry.css
           python3 scripts/build.py examples/order-flow.data.json work/browser-smoke/atlas-drafting.html themes/drafting.css
       - name: Install Chromium for browser checks

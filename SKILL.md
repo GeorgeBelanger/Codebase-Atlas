@@ -45,8 +45,8 @@ It becomes 10–16 steps. If you cannot name it, ask the user before building an
 Copy rules — this is where the value is, not the graphics: `reference/copy.md`.
 Grid layout without overlaps: `reference/layout.md`.
 
-**4 · Theme it to the project.** Two are bundled: `themes/foundry.css` (the built-in
-default, dark) and `themes/drafting.css` (light, ink on paper). Pick the one that fits the
+**4 · Theme it to the project.** Three are bundled: `themes/studio.css` (the built-in
+default, cool light), `themes/foundry.css` (dark), and `themes/drafting.css` (warm paper). Pick the one that fits the
 subject, or write ten lines of your own. If the project has its own design tokens, derive
 from them. See `reference/theme.md`.
 

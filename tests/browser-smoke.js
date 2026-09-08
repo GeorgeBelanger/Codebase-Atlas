@@ -9,7 +9,7 @@ const { chromium, expect } = require('@playwright/test');
 async function main() {
   const directory = path.resolve(process.argv[2] || 'work/browser-smoke');
   const pages = new Map();
-  for (const theme of ['foundry', 'drafting']) {
+  for (const theme of ['studio', 'foundry', 'drafting']) {
     pages.set(`/atlas-${theme}.html`, await fs.readFile(path.join(directory, `atlas-${theme}.html`)));
   }
   // Serve only these two known artifacts, with an OS-assigned port and no subprocess.
@@ -26,7 +26,7 @@ async function main() {
     });
     browser = await chromium.launch();
     const origin = `http://127.0.0.1:${server.address().port}`;
-    for (const theme of ['foundry', 'drafting']) {
+    for (const theme of ['studio', 'foundry', 'drafting']) {
       const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
       page.setDefaultTimeout(10000);
       const errors = [];

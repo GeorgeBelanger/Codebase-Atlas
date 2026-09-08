@@ -27,6 +27,9 @@ const G={
  s:['trafilatura','html2text']}                                // stack chips
 ```
 - `x,y,w,h` — grid footprint. **No two blocks may overlap**; the validator enforces it.
+- `kind` — optional `service` (rounded block, the default), `database` (cylinder),
+  `queue` (stacked block), or `frontend` (window tile). Assign it from the component's
+  role; the renderer does not infer it from the name or AWS identifier.
 - `z` — height. Set it from real line count: `z ≈ 18 + lines/28`, capped ~80.
   Height is information: the tallest block must genuinely be the one carrying the most code.
 - `c` — 1–2 char code, shown when the full label does not fit.
@@ -39,7 +42,7 @@ const G={
   multiple emoji, ordinary text and non-string values. AWS assets are not supported
   by this field.
 - `aws` — optional AWS service identifier such as `'lambda'`, `'s3'`, `'rds'`,
-  `'sqs'` or `'api-gateway'`. The viewer bundles compact, offline service badges;
+  `'sqs'` or `'api-gateway'`. The viewer bundles official AWS architecture SVG icons;
   it does not fetch external image assets. Enable **AWS OFF / AWS ON** separately
   from emoji icons. The validator rejects unknown service identifiers.
 

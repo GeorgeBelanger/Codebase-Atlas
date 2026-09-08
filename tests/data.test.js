@@ -5,6 +5,16 @@ function fixture() {
     return { schemaVersion: 2, G: { app: { s: 'APP', n: 'Application', c: '#123456' } }, N: [{ id: 'a', n: 'A', c: 'A1', g: 'app', x: 0, y: 0, w: 2, h: 2, w1: 'What', h1: 'How', f: [['src/a.js', 10]], s: ['JS'] }, { id: 'b', n: 'B', c: 'B1', g: 'app', x: 3, y: 0, w: 2, h: 2, w1: 'What', h1: 'How', f: [['src/b.js', 20]], s: ['JS'] }], COPY: { a: ['A', 'one', 'why', 'risk'], b: ['B', 'one', 'why', 'risk'] }, E: [['a', 'b', 1], ['b', 'a', 0]], STEPS: [['a', 'Start here', null], ['b', 'Call B', ['a', 'b']]], META: { title: 'Atlas', name: 'App', tag: 'Flow', run: 'Run', stats: [['LINES', '#lines'], ['FILES', '#files']], key: [['Height', 'Code']], intro: { eyebrow: 'All', h: 'Application', p: ['A description'] }, movements: [['Start', 'Call A', 'a']], cta: 'Run', done: 'Complete', chapters: [[0, 'Start']], source: { fictional: true } } };
 }
 const valid = d => assert.deepEqual(validateData(d).errors, []);
+test('component shapes use explicit supported kinds and allow legacy omission', () => {
+    const d = fixture();
+    valid(d);
+    for (const kind of ['service', 'database', 'queue', 'frontend']) {
+        d.N[0].kind = kind;
+        valid(d);
+    }
+    d.N[0].kind = 'guessed-vendor';
+    assert.ok(validateData(d).errors.some(error => error.includes('kind')));
+});
 test('JSON contract derives exact deduplicated metrics and heights', () => {
     const d = fixture();
     d.N[0].f.push(['src/a.js', 10]);

@@ -65,6 +65,7 @@
         "Postgres replica",
         "edge cache"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -95,6 +96,7 @@
         "inverted index",
         "typo tolerant"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -123,6 +125,7 @@
       "s": [
         "cookie to account merge"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -152,6 +155,7 @@
         "pure function",
         "replayable"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -181,6 +185,7 @@
         "state machine",
         "server-side draft"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -210,6 +215,7 @@
         "review queue",
         "threshold"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -240,6 +246,7 @@
         "auth then capture",
         "idempotent webhooks"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -269,6 +276,7 @@
         "single transaction",
         "source of truth"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -298,6 +306,7 @@
         "reservation ledger",
         "20 min expiry"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -328,6 +337,7 @@
         "at least once",
         "per-key ordering"
       ],
+      "kind": "queue",
       "status": "fictional"
     },
     {
@@ -358,6 +368,7 @@
         "wave batching",
         "aisle order"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -383,6 +394,7 @@
         "bin packing",
         "carrier bands"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -412,6 +424,7 @@
         "printer queue",
         "number pool"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -445,6 +458,7 @@
         "abstract carrier",
         "cut-off aware"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -474,6 +488,7 @@
         "normalised scans",
         "alert on silence"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -503,6 +518,7 @@
         "queued",
         "deduplicated"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -533,6 +549,7 @@
         "restock",
         "grading"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -562,6 +579,7 @@
         "server rendered",
         "p95 budget"
       ],
+      "kind": "frontend",
       "status": "fictional"
     },
     {
@@ -591,6 +609,7 @@
         "signed cookies",
         "address validation"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -620,6 +639,7 @@
         "attributed actions",
         "two-person rule"
       ],
+      "kind": "frontend",
       "status": "fictional"
     },
     {
@@ -650,6 +670,7 @@
         "retry policy",
         "nightly reconcile"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -680,6 +701,7 @@
         "versioned",
         "rate limited"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -705,6 +727,7 @@
         "read only",
         "order timeline"
       ],
+      "kind": "frontend",
       "status": "fictional"
     },
     {
@@ -735,6 +758,7 @@
         "primary + replicas",
         "read routing"
       ],
+      "kind": "database",
       "status": "fictional"
     },
     {
@@ -760,6 +784,7 @@
         "append only",
         "same transaction"
       ],
+      "kind": "service",
       "status": "fictional"
     },
     {
@@ -784,6 +809,7 @@
       "s": [
         "alert on absence"
       ],
+      "kind": "service",
       "status": "fictional"
     }
   ],
