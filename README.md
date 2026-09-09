@@ -74,6 +74,16 @@ journey steps naming an edge that was never declared, missing copy, labels too l
 
 ## Exploring an atlas
 
+- **Automatic layout** places components by group and relationships; connections avoid
+  unrelated block footprints. Switch to **Authored** to retain saved positions. New
+  datasets can omit `x` and `y` and have positions generated during normalization.
+- **System overview** collapses the map into expandable groups. Click a group block or
+  its sidebar heading to expand it; **All components** restores the detailed map.
+- **PR review** compares Git revisions and offers **PR changes / Whole codebase** views
+  with optional dependency context, file counts, unmapped files, and change highlights.
+  A baseline atlas adds removed-component and declared-connection comparisons. See
+  [the review workflow](reference/reviews.md) for commands and comparison semantics.
+
 The default **Studio** theme uses a light canvas, soft isometric blocks and rounded
 connections, with a docked journey bar. Set a block's `kind` to `service`, `database`,
 `queue` or `frontend` for rounded blocks, cylinders, stacks or window tiles. Omitted

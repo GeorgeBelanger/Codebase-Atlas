@@ -66,7 +66,7 @@ function validateData(d) {
         if (n.kind !== undefined && !['service', 'database', 'queue', 'frontend'].includes(n.kind))
             bad(l + ': kind must be service, database, queue or frontend');
         for (const k of ['x', 'y', 'w', 'h'])
-            if (typeof n[k] !== 'number' || !Number.isFinite(n[k]) || (['w', 'h'].includes(k) && n[k] <= 0))
+            if (!(['x', 'y'].includes(k) && n[k] === undefined) && (typeof n[k] !== 'number' || !Number.isFinite(n[k]) || (['w', 'h'].includes(k) && n[k] <= 0)))
                 bad(l + ': invalid geometry ' + k);
         if (n.z !== undefined && (!Number.isFinite(n.z) || n.z <= 0))
             bad(l + ': invalid z');
@@ -230,6 +230,36 @@ function validateData(d) {
     }
     if (!META.source)
         warnings.push('Missing source provenance; add repository, commit, generatedAt or fictional: true.');
+    if (META.review !== undefined) {
+        const r = META.review, label = 'META.review';
+        const sha = v => typeof v === 'string' && /^[a-f\d]{40}(?:[a-f\d]{24})?$/i.test(v);
+        if (!obj(r) || !['base', 'head', 'mergeBase'].every(k => sha(r[k])) || !Array.isArray(r.files) || !obj(r.nodes) || !Array.isArray(r.unmapped)) {
+            bad(label + ': requires revisions, files, nodes and unmapped paths');
+        } else {
+            const reviewIds = new Set(ids), changedPaths = new Set();
+            if (r.removedNodes !== undefined && !Array.isArray(r.removedNodes)) bad(label + ': invalid removedNodes');
+            for (const n of Array.isArray(r.removedNodes) ? r.removedNodes : []) {
+                if (!obj(n) || !identifier(n.id) || reviewIds.has(n.id)) { bad(label + ': invalid removed node id'); continue; }
+                reviewIds.add(n.id);
+                const meta = { ...META, movements: [], chapters: [] }; delete meta.review; delete meta.inventory;
+                const check = validateData({ G: { [n.g]: n.group }, N: [n], COPY: { [n.id]: n.copy }, E: [], STEPS: [[n.id, 'Historical component', null]], META: meta });
+                if (check.errors.length) bad(label + ': invalid historical component ' + n.id + ': ' + check.errors.join('; '));
+            }
+            for (const f of r.files) {
+                if (!obj(f) || !safe(f.path) || changedPaths.has(f.path) || (f.oldPath !== undefined && !safe(f.oldPath)) || !['added', 'deleted', 'renamed', 'copied', 'modified'].includes(f.status) || ![f.additions, f.deletions].every(v => v === null || count(v))) bad(label + ': invalid changed file');
+                else changedPaths.add(f.path);
+            }
+            for (const [id, change] of Object.entries(r.nodes)) {
+                if (!reviewIds.has(id) || !obj(change) || !['added', 'modified', 'removed'].includes(change.status) || !Array.isArray(change.files) || !change.files.every(p => changedPaths.has(p))) bad(label + ': invalid component change ' + id);
+            }
+            if (!r.unmapped.every(p => changedPaths.has(p))) bad(label + ': invalid unmapped path');
+            if (r.edges !== undefined && (!Array.isArray(r.edges) || !r.edges.every(e => obj(e) && reviewIds.has(e.from) && reviewIds.has(e.to) && ['added', 'modified', 'removed'].includes(e.status)))) bad(label + ': invalid connection changes');
+            if (r.prUrl !== undefined) {
+                try { const url = new URL(r.prUrl); if (url.protocol !== 'https:' || url.username || url.password) bad(label + ': invalid PR URL'); }
+                catch { bad(label + ': invalid PR URL'); }
+            }
+        }
+    }
     if (!errors.length) {
         const sum = [...files.values()].reduce((a, b) => a + b, 0);
         META.stats.forEach(([l, v]) => {
@@ -242,6 +272,7 @@ function validateData(d) {
 function normalizeData(input) {
     const d = structuredClone(input), files = new Map();
     d.schemaVersion = 2;
+    if (d.N.some(n => n.x === undefined || n.y === undefined)) d.N = require('../assets/graph').layout(d.N, d.E);
     d.N.forEach(n => {
         n.f = [...new Map(n.f.map(([p, lines]) => [filePath(p), lines]))];
         n.status = n.status || (d.META.source?.fictional ? 'fictional' : 'inferred');

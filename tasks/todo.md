@@ -16,6 +16,15 @@
 - [x] Official AWS architecture SVG icons embedded for offline use.
 - [x] Data tests and browser verification of rendering, icons and repeated journeys.
 
+## Architecture exploration and PR reviews
+
+- [x] Deterministic automatic layout and obstacle-aware connection routing.
+- [x] Expandable system groups with preserved journeys and search.
+- [x] Merge-base-to-head Git comparison, ownership mapping, and historical overlays.
+- [x] PR changes / whole-codebase scopes, dependency context, and unmapped files.
+- [x] Fictional review demo and documented CLI workflow.
+- [ ] Complete browser/CI verification and push.
+
 The offline HTML output and optional emoji/AWS controls remain supported. Existing
 JavaScript datasets remain a trusted-author compatibility format; JSON is preferred
 for new datasets. The bookshop remains clearly labeled fictional.

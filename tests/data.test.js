@@ -5,6 +5,17 @@ function fixture() {
     return { schemaVersion: 2, G: { app: { s: 'APP', n: 'Application', c: '#123456' } }, N: [{ id: 'a', n: 'A', c: 'A1', g: 'app', x: 0, y: 0, w: 2, h: 2, w1: 'What', h1: 'How', f: [['src/a.js', 10]], s: ['JS'] }, { id: 'b', n: 'B', c: 'B1', g: 'app', x: 3, y: 0, w: 2, h: 2, w1: 'What', h1: 'How', f: [['src/b.js', 20]], s: ['JS'] }], COPY: { a: ['A', 'one', 'why', 'risk'], b: ['B', 'one', 'why', 'risk'] }, E: [['a', 'b', 1], ['b', 'a', 0]], STEPS: [['a', 'Start here', null], ['b', 'Call B', ['a', 'b']]], META: { title: 'Atlas', name: 'App', tag: 'Flow', run: 'Run', stats: [['LINES', '#lines'], ['FILES', '#files']], key: [['Height', 'Code']], intro: { eyebrow: 'All', h: 'Application', p: ['A description'] }, movements: [['Start', 'Call A', 'a']], cta: 'Run', done: 'Complete', chapters: [[0, 'Start']], source: { fictional: true } } };
 }
 const valid = d => assert.deepEqual(validateData(d).errors, []);
+test('missing positions are automatically laid out while supplied invalid geometry is rejected', () => {
+    const d=fixture();delete d.N[0].x;delete d.N[0].y;valid(d);
+    const normalized=normalizeData(d);valid(normalized);
+    assert.ok(normalized.N.every(n=>Number.isFinite(n.x)&&Number.isFinite(n.y)));
+});
+test('review metadata rejects malformed records and accepts an empty Git comparison', () => {
+    const d=fixture();d.META.review={base:'a'.repeat(40),head:'b'.repeat(40),mergeBase:'a'.repeat(40),files:[],nodes:{},unmapped:[]};valid(d);
+    for(const edit of [r=>r.head='bad',r=>r.files=[null],r=>r.nodes={a:null},r=>r.removedNodes=[null],r=>r.edges=[null],r=>r.unmapped=['missing']]){
+        const copy=structuredClone(d);edit(copy.META.review);assert.ok(validateData(copy).errors.length);
+    }
+});
 test('component shapes use explicit supported kinds and allow legacy omission', () => {
     const d = fixture();
     valid(d);

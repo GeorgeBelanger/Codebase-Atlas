@@ -194,6 +194,18 @@ h2{font-size:25px;font-weight:650;letter-spacing:-.035em}.prose p{font-size:14px
 .zoom button{box-shadow:0 2px 6px #23334c08}.chapters .rbtn{font-size:10px;padding:6px 8px}.scrubber{min-width:190px;flex-basis:190px}
 @media(max-width:1180px){.body{--rail-width:176px;--panel-width:276px}.topbar{gap:12px}.stats{flex-basis:180px}}
 @media(max-width:920px){.shell{display:flex;flex-direction:column;height:auto}.body{display:block}.stage{height:64vh;min-height:340px;margin:12px 0}.rail{border-radius:12px}.item{width:auto;flex-shrink:0}.journey{order:2}.panel{border-radius:12px}}
+.group-toggle{width:100%;text-align:left;cursor:pointer}.group-toggle:hover{color:var(--coral)}
+.explorer-controls{position:absolute;z-index:4;top:12px;left:12px;right:12px;display:flex;align-items:center;flex-wrap:wrap;gap:7px;padding:8px;background:var(--plate);border:1px solid var(--rule);border-radius:12px;font:11px var(--mono)}
+.explorer-controls select{font:inherit;padding:6px;border:1px solid var(--rule);border-radius:7px;background:var(--ground);color:var(--parch)}
+.explorer-controls label{display:flex;align-items:center;gap:5px}.explorer-controls .rbtn{padding:6px 8px}
+.legend{top:112px;max-width:90%}.edge-info{top:142px}
+#view-empty{position:absolute;top:45%;left:10%;right:10%;text-align:center;font:14px/1.6 var(--serif);color:var(--stone)}
+#route-warning{position:absolute;bottom:90px;left:16px;right:16px;background:var(--plate);padding:10px;font:12px var(--serif);border:1px solid var(--rule);border-radius:8px}
+.review-summary{border-bottom:1px solid var(--rule);padding-bottom:18px;margin-bottom:20px;font:13px/1.55 var(--serif)}
+.review-summary h2{font-size:23px}.review-summary a{color:var(--coral)}.review-summary summary{cursor:pointer;margin:12px 0 6px}
+.review-file{font:11px/1.6 var(--mono);overflow-wrap:anywhere;padding:7px 0;border-bottom:1px solid var(--rule)}.review-file span{display:block;color:var(--stone)}
+.change-chip{font:10px var(--mono);border:1px solid currentColor;border-radius:5px;padding:3px 5px}.change-chip.added{color:#218763}.change-chip.removed{color:#C74764}.change-chip.modified{color:#AD7519}
+.review-components{margin-top:12px}.review-components .link{font:12px var(--serif);padding:7px 0}
 </style>
 
 <div class="shell">
@@ -246,9 +258,17 @@ h2{font-size:25px;font-weight:650;letter-spacing:-.035em}.prose p{font-size:14px
 </div>
 
 <script>
+/*__GRAPH__*/
 /*__DATA__*/
 
 N.forEach(n=>{const x=COPY[n.id];if(x){n.d=x[0];n.t=x[1];n.s1=x[2];n.s2=x[3];}});
+const headNodeCount=N.length,sourceNodes=N.map(n=>({...n})),sourceEdges=E.map(e=>[...e]);
+const review=META.review||null;
+if(review){for(const n of review.removedNodes||[]){if(sourceNodes.some(x=>x.id===n.id))continue;
+  if(n.group&&!G[n.g])G[n.g]=n.group;
+  const c=n.copy||[n.c,n.n,n.w1,n.h1];sourceNodes.push({...n,d:c[0],t:c[1],s1:c[2],s2:c[3],reviewStatus:'removed'});
+}for(const edge of review.edges||[]){if(edge.status==='removed'&&sourceNodes.some(n=>n.id===edge.from)&&sourceNodes.some(n=>n.id===edge.to)&&!sourceEdges.some(e=>e[0]===edge.from&&e[1]===edge.to))sourceEdges.push([edge.from,edge.to,0,{kind:'dependency',reviewStatus:'removed'}]);}}
+if(review)for(const e of sourceEdges){const change=review.edges?.find(x=>x.from===e[0]&&x.to===e[1]);if(change)e[3]={...e[3],reviewStatus:change.status};}
 const journeys=typeof JOURNEYS!=='undefined'&&JOURNEYS.length?JOURNEYS:[{id:'default',name:META.tag,steps:STEPS,chapters:META.chapters,done:META.done}];
 let journey=journeys[0],journeySteps=journey.steps,CH=journey.chapters?.length?journey.chapters:[[0,'START']];
 const chapterOf=i=>{let c=CH[0][1];for(const k of CH)if(i>=k[0])c=k[1];return c;};
@@ -297,11 +317,11 @@ function at(e,t){let d=t*e.L,p=e.p;
 function resize(){dpr=Math.min(devicePixelRatio||1,2);const r=cv.getBoundingClientRect();
   W=r.width;H=r.height;cv.width=W*dpr;cv.height=H*dpr;}
 function fit(){fitNodes(N);}
-function fitNodes(nodes){const pts=[];nodes.forEach(n=>{for(const[a,b]of[[0,0],[n.w,0],[0,n.h],[n.w,n.h]]){
+function fitNodes(nodes){if(!nodes.length)return;const pts=[];nodes.forEach(n=>{for(const[a,b]of[[0,0],[n.w,0],[0,n.h],[n.w,n.h]]){
     pts.push(iso(n.x+a,n.y+b,0));pts.push(iso(n.x+a,n.y+b,n.z));}});
   const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);
   const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
-  cam.s=Math.min((W-46)/(x1-x0),(H-160)/(y1-y0));cam.s=Math.max(.35,Math.min(cam.s,1.7));
+  cam.s=Math.min(Math.max(1,W-46)/Math.max(1,x1-x0),Math.max(1,H-240)/Math.max(1,y1-y0));cam.s=Math.max(.01,Math.min(cam.s,1.7));
   cam.x=W/2-((x0+x1)/2)*cam.s;cam.y=H/2-((y0+y1)/2)*cam.s;}
 
 function sp(x,y,z){const p=iso(x,y,z);return{x:p.x*cam.s+cam.x,y:p.y*cam.s+cam.y};}
@@ -363,11 +383,14 @@ function draw(){
   laneLabels();
   const focus=matches||(sel&&!playing?related(sel):null);
   for(const e of E){
+    if(e.p.length<2)continue;
     const on=liveEdge===e,rel=sel&&(e[0]===sel||e[1]===sel);
     const dim=(matches?!(matches.has(e[0])||matches.has(e[1])):(focus&&!rel))||(playing&&!on);
     ctx.beginPath();e.p.forEach((p,i)=>{const s=sp(p.x,p.y,0);i?ctx.lineTo(s.x,s.y):ctx.moveTo(s.x,s.y);});
     ctx.strokeStyle=on?`rgba(${TK.coral},0.95)`:rel?`rgba(${TK.parch},0.5)`:dim?`rgba(${TK.brass},0.07)`:e[2]?`rgba(${TK.brass},0.65)`:`rgba(${TK.brass},0.38)`;
-    ctx.lineWidth=on?2.5:rel?1.8:1.2;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();
+    const change=e[3]?.reviewStatus;
+    if(change&&!on){ctx.strokeStyle=change==='added'?'#218763':change==='removed'?'#C74764':'#AD7519';ctx.setLineDash(change==='removed'?[5,4]:[]);}
+    ctx.lineWidth=on||change?2.5:rel?1.8:1.2;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();ctx.setLineDash([]);
     if(!RM&&(on||(e[2]&&!dim))){
       const t=on?liveT:e.t;const q=at(e,Math.min(t,1));const s=sp(q.x,q.y,0);
       const r=on?4.5:2.4;
@@ -386,6 +409,7 @@ function draw(){
 
 // Place static arrows on exposed floor segments so blocks cannot hide direction.
 function edgeAnchor(e,boxes){
+  if(e.p.length<2)return null;
   for(const t of [.5,.4,.6,.3,.7,.2,.8]){
     const a=at(e,t),p=sp(a.x,a.y,0);
     if(p.x<12||p.x>W-12||p.y<12||p.y>H-12)continue;
@@ -415,7 +439,7 @@ function pickEdge(pt){
 }
 function showEdge(){
   const e=hoverEdge||selectedEdge||liveEdge,el=document.getElementById('edge-info');
-  el.hidden=!e;if(e)el.textContent=byId[e[0]].n+' → '+byId[e[1]].n+' · '+(e[3]?.kind||'dependency')+' · '+(e[3]?.status||'inferred');
+  el.hidden=!e;if(e)el.textContent=byId[e[0]].n+' → '+byId[e[1]].n+' · '+(e[3]?.kind||'dependency')+' · '+(e[3]?.status||'inferred')+(e[3]?.reviewStatus?' · '+e[3].reviewStatus:'')+(e.memberEdges?.length>1?' · '+e.memberEdges.length+' connections':'');
 }
 function centerNode(id){
   const n=byId[id],c=ctr(n),p=iso(c.x,c.y,n.z/2);
@@ -435,6 +459,7 @@ function laneLabels(){
   for(const g of groups){
     if(g==='ledger')continue;
     const ns=N.map((n,i)=>[n,boxes[i]]).filter(k=>k[0].g===g);
+    if(!ns.length)continue;
     const cx=ns.reduce((a,k)=>a+(k[1].x0+k[1].x1)/2,0)/ns.length;
     let top=Math.min(...ns.map(k=>k[1].y0));
     const t=G[g].s,w=ctx.measureText(t).width;
@@ -498,6 +523,9 @@ function block(n,focus){
     for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(u.x+(v.x-u.x)*(.12+i*.09)+(T[3].x-u.x)*.1,u.y+(v.y-u.y)*(.12+i*.09)+(T[3].y-u.y)*.1,1.3,0,Math.PI*2);ctx.fillStyle=edge;ctx.fill();}
   }
   if(n.kind!=='database'){n._T=T;n._L=left;n._R=right;}
+  const change=componentChange(n);
+  if(change){const outline=change==='removed'?'#C74764':change==='added'?'#218763':'#AD7519';
+    ctx.save();if(change==='removed')ctx.setLineDash([5,3]);poly(n._T,null,outline,2.5);ctx.restore();}
   const cx=(T[0].x+T[2].x)/2,cy=(T[0].y+T[2].y)/2;
   const wide=Math.abs(T[1].x-T[3].x);
   ctx.textAlign='center';ctx.textBaseline='middle';
@@ -579,7 +607,8 @@ function sourceLink(path,start,end){
     const url=new URL(source.repository);
     if(url.protocol!=='https:'||url.hostname!=='github.com'||url.username||url.password||!/^\/[\w.-]+\/[\w.-]+\/?$/.test(url.pathname))return null;
     const root=url.origin+url.pathname.replace(/\.git\/?$/,'').replace(/\/$/,'');
-    return root+'/blob/'+encodeURIComponent(source.commit)+'/'+path.split('/').map(encodeURIComponent).join('/')+(start?'#L'+start+(end&&end!==start?'-L'+end:''):'');
+    const revision=sel&&componentChange(byId[sel]||{})==='removed'?review.mergeBase:source.commit;
+    return root+'/blob/'+encodeURIComponent(revision)+'/'+path.split('/').map(encodeURIComponent).join('/')+(start?'#L'+start+(end&&end!==start?'-L'+end:''):'');
   }catch{return null;}
 }
 function evidenceHTML(items=[]){
@@ -594,31 +623,32 @@ function provenanceHTML(){
   return `<div class="provenance">${esc(status)}${s.generatedAt?'<br>Generated '+esc(s.generatedAt):''}${s.dirty?'<br>Includes uncommitted working-tree changes':''}${m.mappedLines!==undefined?'<br>'+Number(m.mappedLines).toLocaleString()+' mapped lines across '+Number(m.mappedFiles).toLocaleString()+' files':''}${m.repositoryLines!==undefined?'<br>'+Number(m.repositoryLines).toLocaleString()+' repository text lines (inventory scope)':''}</div>`;
 }
 let tab='what';
-const groups=[...new Set(N.map(n=>n.g))];
+const groups=[...new Set(sourceNodes.map(n=>n.g))];
 rail.innerHTML='<div class="search"><input id="q" type="search" placeholder="Search blocks or files" aria-label="Filter blocks"><div class="search-status"><span id="result-count" role="status"></span><button id="clear-search" type="button">Clear</button></div></div>'+groups.map(g=>{
-  const items=N.filter(n=>n.g===g);
-  return `<div class="ghead" data-g="${esc(g)}"><span>${esc(G[g].n.toUpperCase())}</span><span>${items.length}</span></div>`+
+  const items=sourceNodes.filter(n=>n.g===g);
+  return `<button class="ghead group-toggle" data-g="${esc(g)}" aria-expanded="true" aria-label="Collapse ${esc(G[g].n)}"><span>${esc(G[g].n.toUpperCase())}</span><span>${items.length} ▾</span></button>`+
    items.map(n=>`<button class="item" data-g="${esc(g)}" data-id="${esc(n.id)}"><span class="dot" style="background:${esc(G[g].c)}"></span><em>${esc(n.n)}</em></button>`).join('');
 }).join('');
 const q=document.getElementById('q');
-const searchIndex=new Map(N.map(n=>[n.id,[n.n,n.t,G[n.g].n,n.aws,...n.f.map(f=>f[0]),...n.s].join(' ').toLowerCase()]));
+const searchIndex=new Map(sourceNodes.map(n=>[n.id,[n.n,n.t,G[n.g].n,n.aws,...n.f.map(f=>f[0]),...n.s].join(' ').toLowerCase()]));
 function filterBlocks(){
   const v=q.value.trim().toLowerCase();
-  matches=v?new Set(N.filter(n=>searchIndex.get(n.id).includes(v)).map(n=>n.id)):null;
+  matches=v?new Set(sourceNodes.filter(n=>searchIndex.get(n.id)?.includes(v)).map(n=>n.id)):null;
   groups.forEach(g=>{
     let count=0;
     rail.querySelectorAll('.item').forEach(b=>{if(b.dataset.g!==g)return;
-      const hit=!matches||matches.has(b.dataset.id);b.style.display=hit?'':'none';if(hit)count++;
+      const hit=(!matches||matches.has(b.dataset.id))&&scopeIncludes(b.dataset.id);b.style.display=hit&&!collapsedGroups.has(b.dataset.g)?'':'none';if(hit)count++;
     });
     const h=[...rail.querySelectorAll('.ghead')].find(el=>el.dataset.g===g);if(h)h.style.display=count?'':'none';
   });
-  document.getElementById('result-count').textContent=(matches?matches.size:N.length)+' of '+N.length+' blocks';
+  document.getElementById('result-count').textContent=sourceNodes.filter(n=>(!matches||matches.has(n.id))&&scopeIncludes(n.id)).length+' of '+sourceNodes.length+' blocks';
   document.getElementById('clear-search').disabled=!v;
 }
-q.addEventListener('input',()=>{stop();filterBlocks();});
+q.addEventListener('input',()=>{stop();if(q.value.trim()){collapsedGroups.clear();rebuildView(false);}filterBlocks();});
 document.getElementById('clear-search').addEventListener('click',()=>{q.value='';filterBlocks();q.focus();});
 q.addEventListener('keydown',e=>{if(e.key==='Enter'&&matches&&matches.size)inspect(matches.values().next().value);});
 function inspect(id){
+  if(byId[id]?.memberIds){expandGroup(byId[id].g);return;}
   hoverEdge=null;
   if(matches&&!matches.has(id)){q.value='';filterBlocks();}
   stop();step=-1;complete=false;active=new Set();visited={};liveEdge=null;selectedEdge=null;
@@ -631,7 +661,7 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
 
 function render(){
   if(!sel){
-    pbody.innerHTML=`${provenanceHTML()}<div class="eyebrow" style="color:var(--stone)">${esc(META.intro.eyebrow)}</div>
+    pbody.innerHTML=`${reviewSummaryHTML()}${provenanceHTML()}<div class="eyebrow" style="color:var(--stone)">${esc(META.intro.eyebrow)}</div>
       <h2>${esc(META.intro.h)}</h2>
       <div class="prose">${META.intro.p.map(t=>`<p>${rich(t)}</p>`).join('')}</div>
       <div class="lbl">HOW TO READ THE MAP</div>
@@ -640,9 +670,10 @@ function render(){
       <div class="big">${META.movements.map(m=>`<button data-go="${esc(m[2])}"><b>${esc(m[0])}</b><span>${esc(m[1])}</span></button>`).join('')}</div>
       <div class="prose"><p style="color:var(--stone);font-size:14px">${rich(META.cta)}</p></div>`;
     pbody.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>inspect(b.dataset.go)));
+    bindReviewLinks();
     return;}
   const n=byId[sel],c=G[n.g].c;
-  const nb=E.filter(e=>e[0]===n.id||e[1]===n.id);
+  const nb=sourceEdges.filter(e=>e[0]===n.id||e[1]===n.id);
   if(tab==='what'){
     pbody.innerHTML=`<div class="eyebrow" style="color:${esc(c)}"><span class="dot" style="background:${esc(c)};width:7px;height:7px;display:inline-block"></span>${esc(G[n.g].n.toUpperCase())}</div>
       <h2>${esc(n.n)}</h2><div class="sub">${esc((n.t||'').toUpperCase())}</div>
@@ -652,7 +683,7 @@ function render(){
       <div class="lbl">CONNECTED TO</div><div class="links">
       ${nb.map(e=>{
         const id=e[0]===n.id?e[1]:e[0],direction=e[0]===n.id?'sends to':'fed by',meta=e[3]||{};
-        return `<button class="link" data-go="${esc(id)}"><i>${direction}</i> ${esc(byId[id].n)}</button><details class="evidence"><summary>${esc(meta.kind||'dependency')} · ${esc(meta.status||'inferred')}</summary>${meta.evidence?.length?evidenceHTML(meta.evidence):'No source evidence recorded.'}</details>`;
+        return `<button class="link" data-go="${esc(id)}"><i>${direction}</i> ${esc(sourceNodes.find(x=>x.id===id)?.n||id)}</button><details class="evidence"><summary>${esc(meta.kind||'dependency')} · ${esc(meta.status||'inferred')}${meta.reviewStatus?' · '+esc(meta.reviewStatus):''}</summary>${meta.evidence?.length?evidenceHTML(meta.evidence):'No source evidence recorded.'}</details>`;
       }).join('')||'<div class="file">No connections declared</div>'}
       </div>`;
   }else{
@@ -665,12 +696,15 @@ function render(){
       <div class="lbl">STACK</div><div class="chips">${n.aws&&AWS_BADGES[n.aws.toLowerCase()]?`<span class="chip">AWS ${AWS_BADGES[n.aws.toLowerCase()][1]}</span>`:''}${n.s.map(x=>`<span class="chip">${esc(x)}</span>`).join('')}</div>`;
   }
   const visits=journeySteps.map((st,i)=>st[0]===sel?i:-1).filter(i=>i>=0);
+  pbody.innerHTML=reviewNodeHTML(n)+pbody.innerHTML;
   if(visits.length)pbody.innerHTML+=`<div class="lbl">VISITS IN ${esc(journey.name)}</div><div class="visit-list">${visits.map(i=>`<button class="rbtn" data-visit="${i}">STEP ${i+1}</button>`).join('')}</div>`;
   pbody.querySelectorAll('[data-visit]').forEach(b=>b.addEventListener('click',()=>{stop();goStep(Number(b.dataset.visit));}));
   pbody.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>inspect(b.dataset.go)));
 }
 
 function choose(id,center){
+  revealNode(id);
+  if(!byId[id])return;
   sel=id;
   rail.querySelectorAll('.item').forEach(b=>{b.classList.toggle('sel',b.dataset.id===id);b.setAttribute('aria-pressed',String(b.dataset.id===id));});
   const el=rail.querySelector('.item.sel');
@@ -730,6 +764,7 @@ function syncJourney(){
   });
 }
 function goStep(i){
+  if(collapsedGroups.size||reviewScope!=='whole'){collapsedGroups.clear();reviewScope='whole';rebuildView(false);}
   if(i>=journeySteps.length){
     stop();complete=true;active=new Set();liveEdge=null;
     capnum.textContent='RUN COMPLETE';capch.textContent='';capbar.style.width='100%';captxt.textContent=journey.done||META.done;
@@ -790,7 +825,7 @@ cv.addEventListener('pointerup',e=>{
   if(moved<4){const h=pick(pt);if(h)inspect(h);else{const edge=pickEdge(pt);if(edge){inspect(edge[0]);selectedEdge=edge;showEdge();}}}});
 cv.addEventListener('pointerleave',()=>{drag=null;hov=null;hoverEdge=null;showEdge();cv.classList.remove('drag');});
 cv.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY<0?1.1:1/1.1,e.offsetX,e.offsetY);},{passive:false});
-function zoom(k,ox,oy){ox=ox??W/2;oy=oy??H/2;const s=Math.max(.35,Math.min(cam.s*k,2.4));
+function zoom(k,ox,oy){ox=ox??W/2;oy=oy??H/2;const s=Math.max(.01,Math.min(cam.s*k,2.4));
   cam.x=ox-(ox-cam.x)*(s/cam.s);cam.y=oy-(oy-cam.y)*(s/cam.s);cam.s=s;}
 document.getElementById('zin').addEventListener('click',()=>zoom(1.2));
 document.getElementById('zout').addEventListener('click',()=>zoom(1/1.2));
@@ -824,7 +859,8 @@ document.getElementById('m-name').textContent=META.name;
 document.getElementById('m-tag').textContent=META.tag;
 document.getElementById('btn-run').textContent=META.run;
 function renderStats(){document.getElementById('stats').innerHTML=META.stats.map(st=>{
-  const v=st[1]==='#blocks'?N.length:st[1]==='#steps'?journeySteps.length:st[1];
+  const v=st[1]==='#blocks'?headNodeCount:st[1]==='#steps'?journeySteps.length:st[1];
   return `<div class="stat">${esc(st[0])}<b>${esc(v)}</b></div>`;}).join('');}
-renderStats();filterBlocks();syncJourney();render();boot();requestAnimationFrame(frame);
+/*__EXPLORER__*/
+initExplorer();renderStats();filterBlocks();syncJourney();render();boot();requestAnimationFrame(frame);
 </script>

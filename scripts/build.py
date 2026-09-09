@@ -23,6 +23,8 @@ def main():
                           for k in ['G', 'N', 'COPY', 'E', 'STEPS', 'META', 'JOURNEYS'])
     theme = pathlib.Path(args.theme).read_text() if args.theme else ''
     page = (here / 'assets/engine.html').read_text()
+    page = page.replace('/*__GRAPH__*/', (here / 'assets/graph.js').read_text())
+    page = page.replace('/*__EXPLORER__*/', (here / 'assets/explorer.js').read_text())
     page = page.replace('__TITLE__', html.escape(data['META']['title'], quote=True))
     page = page.replace('/*__THEME__*/', theme).replace('/*__DATA__*/', constants)
     page = '<meta charset="utf-8">\n' + page

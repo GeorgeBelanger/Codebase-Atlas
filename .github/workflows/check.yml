@@ -23,16 +23,20 @@ jobs:
         run: npm install --ignore-scripts
       - name: Data and inventory regressions
         run: npm test
-      - name: Build both themes
+      - name: Build all themes and PR review demo
         run: |
           mkdir -p work/browser-smoke
           python3 scripts/build.py examples/order-flow.data.json work/browser-smoke/atlas-studio.html
           python3 scripts/build.py examples/order-flow.data.json work/browser-smoke/atlas-foundry.html themes/foundry.css
           python3 scripts/build.py examples/order-flow.data.json work/browser-smoke/atlas-drafting.html themes/drafting.css
+          python3 scripts/build.py examples/review-demo.data.json work/browser-smoke/atlas-review.html
+          node tests/review-fixtures.js
       - name: Install Chromium for browser checks
         run: npx playwright install --with-deps chromium
       - name: Browser smoke tests
         run: npm run test:browser
+      - name: PR review browser tests
+        run: node tests/review-browser.js
       - name: Save browser examples and screenshots
         if: always()
         uses: actions/upload-artifact@v4
