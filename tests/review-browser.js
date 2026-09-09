@@ -29,6 +29,8 @@ async function main() {
         await page.goto(`http://127.0.0.1:${server.address().port}/atlas-review.html`);
         await expect(page.locator('.stage .legend,.stage .hint')).toHaveCount(0);
         for(let i=0;i<5;i++)await page.locator('#zin').click();
+        // Wait for the canvas to render the final zoom before comparing scopes.
+        await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
         await expect.poll(()=>page.evaluate(()=>window.drawnPositions.PAYMENTS||window.drawnPositions.K4)).toBeTruthy();
         const label=await page.evaluate(()=>window.drawnPositions.PAYMENTS?'PAYMENTS':'K4');
         const before=await page.evaluate(label=>window.drawnPositions[label],label);
