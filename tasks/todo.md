@@ -23,7 +23,7 @@
 - [x] Merge-base-to-head Git comparison, ownership mapping, and historical overlays.
 - [x] PR changes / whole-codebase scopes, dependency context, and unmapped files.
 - [x] Fictional review demo and documented CLI workflow.
-- [ ] Complete browser/CI verification and push.
+- [x] Complete browser/CI verification and push (28 local tests; all-theme and PR browser suites passed).
 
 The offline HTML output and optional emoji/AWS controls remain supported. Existing
 JavaScript datasets remain a trusted-author compatibility format; JSON is preferred
