@@ -236,10 +236,8 @@ h2{font-size:25px;font-weight:650;letter-spacing:-.035em}.prose p{font-size:14px
 
     <div class="stage">
       <canvas id="cv" aria-hidden="true"></canvas>
-      <div class="legend" id="legend"></div>
       <div class="edge-info" id="edge-info" hidden></div>
       <div class="caption" id="cap"><div class="num"><span id="capnum"></span><span id="capch"></span></div><p id="captxt"></p><div class="bar"><i id="capbar"></i></div></div>
-      <div class="hint">HOVER TO SKIM · CLICK TO READ · DRAG TO PAN · SPACE TO PLAY · ← → TO WALK IT</div>
       <div class="zoom">
         <button id="focus-node" disabled>FOCUS NEIGHBORS</button>
         <button id="zin" aria-label="Zoom in">+</button>
@@ -269,6 +267,7 @@ if(review){for(const n of review.removedNodes||[]){if(sourceNodes.some(x=>x.id==
   const c=n.copy||[n.c,n.n,n.w1,n.h1];sourceNodes.push({...n,d:c[0],t:c[1],s1:c[2],s2:c[3],reviewStatus:'removed'});
 }for(const edge of review.edges||[]){if(edge.status==='removed'&&sourceNodes.some(n=>n.id===edge.from)&&sourceNodes.some(n=>n.id===edge.to)&&!sourceEdges.some(e=>e[0]===edge.from&&e[1]===edge.to))sourceEdges.push([edge.from,edge.to,0,{kind:'dependency',reviewStatus:'removed'}]);}}
 if(review)for(const e of sourceEdges){const change=review.edges?.find(x=>x.from===e[0]&&x.to===e[1]);if(change)e[3]={...e[3],reviewStatus:change.status};}
+if(review)for(const e of sourceEdges)if(review.evidence?.some(hit=>hit.type==='edge'&&hit.from===e[0]&&hit.to===e[1]))e[3]={...e[3],evidenceTouched:true};
 const journeys=typeof JOURNEYS!=='undefined'&&JOURNEYS.length?JOURNEYS:[{id:'default',name:META.tag,steps:STEPS,chapters:META.chapters,done:META.done}];
 let journey=journeys[0],journeySteps=journey.steps,CH=journey.chapters?.length?journey.chapters:[[0,'START']];
 const chapterOf=i=>{let c=CH[0][1];for(const k of CH)if(i>=k[0])c=k[1];return c;};
@@ -389,6 +388,7 @@ function draw(){
     ctx.beginPath();e.p.forEach((p,i)=>{const s=sp(p.x,p.y,0);i?ctx.lineTo(s.x,s.y):ctx.moveTo(s.x,s.y);});
     ctx.strokeStyle=on?`rgba(${TK.coral},0.95)`:rel?`rgba(${TK.parch},0.5)`:dim?`rgba(${TK.brass},0.07)`:e[2]?`rgba(${TK.brass},0.65)`:`rgba(${TK.brass},0.38)`;
     const change=e[3]?.reviewStatus;
+    if(e[3]?.evidenceTouched&&!change&&!on)ctx.strokeStyle='#526CE5';
     if(change&&!on){ctx.strokeStyle=change==='added'?'#218763':change==='removed'?'#C74764':'#AD7519';ctx.setLineDash(change==='removed'?[5,4]:[]);}
     ctx.lineWidth=on||change?2.5:rel?1.8:1.2;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();ctx.setLineDash([]);
     if(!RM&&(on||(e[2]&&!dim))){
@@ -439,7 +439,7 @@ function pickEdge(pt){
 }
 function showEdge(){
   const e=hoverEdge||selectedEdge||liveEdge,el=document.getElementById('edge-info');
-  el.hidden=!e;if(e)el.textContent=byId[e[0]].n+' → '+byId[e[1]].n+' · '+(e[3]?.kind||'dependency')+' · '+(e[3]?.status||'inferred')+(e[3]?.reviewStatus?' · '+e[3].reviewStatus:'')+(e.memberEdges?.length>1?' · '+e.memberEdges.length+' connections':'');
+  el.hidden=!e;if(e)el.textContent=byId[e[0]].n+' → '+byId[e[1]].n+' · '+(e[3]?.kind||'dependency')+' · '+(e[3]?.status||'inferred')+(e[3]?.reviewStatus?' · '+e[3].reviewStatus:'')+(e[3]?.evidenceTouched?' · cited lines touched':'')+(e.memberEdges?.length>1?' · '+e.memberEdges.length+' connections':'');
 }
 function centerNode(id){
   const n=byId[id],c=ctr(n),p=iso(c.x,c.y,n.z/2);
@@ -851,10 +851,9 @@ function frame(now){
   }
   draw();requestAnimationFrame(frame);
 }
-function boot(){readTokens();resize();fit();draw();}
+function boot(){readTokens();resize();fitNodes(layoutScene);draw();}
 new ResizeObserver(()=>{const r=cv.getBoundingClientRect();if(r.width<2||r.height<2)return;const oldW=W,oldH=H;resize();cam.x+=(W-oldW)/2;cam.y+=(H-oldH)/2;draw();}).observe(cv.parentElement);
 
-document.getElementById('legend').innerHTML=(META.legend||['TALLER = MORE CODE','LINE = A REAL PATH','MOVING MARK = ONE UNIT OF WORK']).map(t=>`<span>${esc(t)}</span>`).join('');
 document.getElementById('m-name').textContent=META.name;
 document.getElementById('m-tag').textContent=META.tag;
 document.getElementById('btn-run').textContent=META.run;

@@ -2,6 +2,16 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { layout, route, collapse } = require('../assets/graph.js');
 const node = (id, g, x = 0, y = 0, w = 4, h = 3) => ({ id, g, x, y, w, h, z: 30, n: id, f: [[id + '.js', 10]] });
+test('cyclic and equal-rank groups follow top-left to bottom-right in screen space',()=>{
+  const nodes=[node('start','z_first',0),node('middle','a_second',8),node('end','m_third',16)];
+  for(const edges of [[],[['start','middle'],['middle','end'],['end','start']]]){
+    const result=layout(nodes,edges);
+    for(let i=1;i<result.length;i++){
+      assert.ok(result[i].x-result[i].y>result[i-1].x-result[i-1].y);
+      assert.ok(result[i].x+result[i].y>result[i-1].x+result[i-1].y);
+    }
+  }
+});
 
 test('layout separates unequal blocks, groups related components, and terminates for cycles', () => {
   const nodes = [node('a', 'one', 0, 0, 8, 2), node('b', 'one'), node('c', 'two'), node('d', 'three')];

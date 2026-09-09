@@ -60,17 +60,17 @@
     }
     const placed = new Map(); let x = 0;
     for (const r of [...columns.keys()].sort((a, b) => a - b)) {
-      let y = 0, columnWidth = 0;
-      for (const g of columns.get(r)) {
+      // Equal-rank/cyclic groups also advance along +x (screen down-right).
+      // Authored anchors break ties without depending on input array order.
+      const anchor = g => Math.min(...groups.get(g).map(n => (Number.isFinite(n.x)?n.x:0)+(Number.isFinite(n.y)?n.y:0)*2));
+      for (const g of columns.get(r).slice().sort((a,b)=>anchor(a)-anchor(b)||compare(a,b))) {
         const members = groups.get(g).slice().sort((a, b) => compare(a.id, b.id));
         const across = Math.ceil(Math.sqrt(members.length));
         const cellW = Math.max(...members.map(n => dimensions(n).w)) + 3;
         const cellH = Math.max(...members.map(n => dimensions(n).h)) + 3;
-        members.forEach((n, i) => placed.set(n.id, { ...n, x: x + (i % across) * cellW, y: y + Math.floor(i / across) * cellH }));
-        columnWidth = Math.max(columnWidth, across * cellW);
-        y += Math.ceil(members.length / across) * cellH + 5;
+        members.forEach((n, i) => placed.set(n.id, { ...n, x: x + (i % across) * cellW, y: Math.floor(i / across) * cellH }));
+        x += across * cellW + 6;
       }
-      x += columnWidth + 6;
     }
     return nodes.map(n => placed.get(n.id));
   }
@@ -123,6 +123,7 @@
       e.memberEdges.push([...edge]); e[2] = Math.max(e[2] || 0, edge[2] || 0);
     }
     for (const e of remapped.values()) {
+      if(e.memberEdges.some(member=>member[3]?.evidenceTouched))e[3]={...e[3],evidenceTouched:true};
       const statuses = e.memberEdges.map(member => member[3]?.reviewStatus);
       if (statuses.some(Boolean)) {
         e[3] = { ...e[3], reviewStatus: statuses.every(status => status === statuses[0]) ? statuses[0] : 'modified' };

@@ -32,7 +32,58 @@ function changedFiles(repo, base, head) {
         const item = byPath.get(file);
         if (item) { item.additions = additions === '-' ? null : Number(additions); item.deletions = deletions === '-' ? null : Number(deletions); }
     }
+    for (const file of files) {
+        // Added/deleted text files have one range covering the entire file. This
+        // also handles an old rename path being reused by a newly added file.
+        if (file.status === 'added' || file.status === 'deleted') {
+            const added = file.status === 'added', count = added ? file.additions : file.deletions;
+            file.hunks = count ? [{ oldStart: added ? 0 : 1, oldCount: added ? 0 : count,
+                newStart: added ? 1 : 0, newCount: added ? count : 0 }] : [];
+            continue;
+        }
+        const paths = [...new Set([file.oldPath, file.path].filter(Boolean))];
+        const patch = git(repo, ['diff', '--no-ext-diff', '--no-textconv', '-M', '--full-index', '--unified=0', base, head,
+            '--', ...paths.map(p => ':(literal)' + p)]);
+        // A renamed path may also have been reused by a different file. Match the
+        // blob pair before reading ranges so that file cannot supply our hunks.
+        const oldBlob = file.status === 'added' ? null : git(repo, ['rev-parse', '--verify', base + ':' + (file.oldPath || file.path)]).trim();
+        const newBlob = file.status === 'deleted' ? null : git(repo, ['rev-parse', '--verify', head + ':' + file.path]).trim();
+        let relevantPatch = patch.split(/^diff --git /m).filter(section => {
+            const index = section.match(/^index ([0-9a-f]+)\.\.([0-9a-f]+)/m);
+            return index && (oldBlob ? index[1] === oldBlob : /^0+$/.test(index[1])) &&
+                (newBlob ? index[2] === newBlob : /^0+$/.test(index[2]));
+        }).join('\n');
+        // Rename detection can differ when its candidate paths are narrowed.
+        // Compare the exact immutable blobs if the scoped patch lost that pair.
+        if (!relevantPatch && oldBlob && newBlob && (file.additions || file.deletions)) {
+            relevantPatch = git(repo, ['diff', '--no-ext-diff', '--no-textconv', '--unified=0', oldBlob, newBlob]);
+        }
+        file.hunks = [...relevantPatch.matchAll(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/gm)].map(match => ({
+            oldStart: Number(match[1]), oldCount: match[2] === undefined ? 1 : Number(match[2]),
+            newStart: Number(match[3]), newCount: match[4] === undefined ? 1 : Number(match[4])
+        }));
+    }
     return files;
+}
+function changedEvidence(atlas, files, side) {
+    if (!atlas) return [];
+    const matches = [];
+    const collect = (refs, owner) => {
+        for (const ref of refs || []) {
+            const touched = files.some(file => {
+                if (ref.path !== (side === 'base' ? file.oldPath || file.path : file.path)) return false;
+                return file.hunks.some(hunk => {
+                    const start = side === 'base' ? hunk.oldStart : hunk.newStart;
+                    const count = side === 'base' ? hunk.oldCount : hunk.newCount;
+                    return count > 0 && ref.startLine <= start + count - 1 && (ref.endLine || ref.startLine) >= start;
+                });
+            });
+            if (touched) matches.push({ ...ref, ...owner, side });
+        }
+    };
+    for (const node of atlas.N) collect(node.evidence, { type: 'node', node: node.id });
+    for (const edge of atlas.E) collect(edge[3]?.evidence, { type: 'edge', from: edge[0], to: edge[1] });
+    return matches;
 }
 function owns(node, file) {
     const paths = [...node.f.map(f => f[0]), ...(node.evidence || []).map(e => e.path)];
@@ -92,7 +143,15 @@ function createReview(atlasFile, { repo, base, head, baseAtlas, prUrl }) {
         for (const [k, e] of oldEdges) if (!newEdges.has(k)) edges.push({ from: e[0], to: e[1], status: 'removed' });
     }
     const unmapped = files.filter(f => !mapped.has(f.path)).map(f => f.path);
+    const snapshotAvailable = (atlas, commit) => !!atlas && atlas.META.source?.commit === commit && !atlas.META.source.fictional && !atlas.META.source.dirty;
+    const evidenceStatus = { head: snapshotAvailable(data, headCommit) ? 'available' : 'unavailable',
+        base: snapshotAvailable(previous, mergeBase) ? 'available' : 'unavailable' };
+    const evidence = [
+        ...(evidenceStatus.head === 'available' ? changedEvidence(data, files, 'head') : []),
+        ...(evidenceStatus.base === 'available' ? changedEvidence(previous, files, 'base') : [])
+    ];
     data.META.review = { base: baseCommit, head: headCommit, mergeBase, files, nodes, edges, removedNodes, unmapped,
+        evidence, evidenceStatus,
         summary: { files: files.length, nodes: Object.keys(nodes).length, unmapped: unmapped.length,
             additions: files.reduce((sum, f) => sum + (f.additions || 0), 0), deletions: files.reduce((sum, f) => sum + (f.deletions || 0), 0) },
         ...(prUrl ? { prUrl } : {}) };

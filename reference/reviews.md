@@ -39,6 +39,14 @@ File statuses and additions/deletions come from Git, including renames and binar
 directory boundaries and evidence paths. A file may affect multiple components. Files
 with no mapped owner remain visible in the review summary.
 
+Changed-line evidence is a separate signal. The generator intersects zero-context Git
+hunks with cited node and connection ranges: head citations use new-line ranges, while
+baseline citations use old-line ranges. A side is checked only when its atlas declares
+the matching source commit and is neither fictional nor marked dirty. Unversioned sides
+are labeled not checked. Insertions with zero old lines and deletions with zero new lines
+do not falsely match adjacent citations. Binary files have no line evidence matches.
+An overlap flags a citation for review; it does not prove a behavioral change.
+
 Removed components are historical overlays from the baseline atlas. They do not change
 the head atlas's mapped metrics. Source links for those overlays use the merge-base
 revision. Added/removed/modified connections are comparisons of the two authored graphs;
@@ -56,6 +64,8 @@ generator preserves provenance rather than assigning a source commit it did not 
 - **System overview** collapses groups; click a group block or its sidebar heading to
   expand it. **All components** expands every group.
 - **PR changes / Whole codebase** changes scope while retaining change highlights.
+  Positions, connection routes and the camera stay stable when changing scope or
+  toggling dependency context. Use Fit all to frame the current selection of blocks.
 - **Dependency context** includes immediate neighbors of changed components.
 - **Review summary** returns to the changed-file/component list.
 - Following a hidden connection or starting a journey reveals the needed components.

@@ -1,5 +1,10 @@
 # Laying out the grid
 
+Automatic placement uses the same top-left to bottom-right reading direction as the
+authored flow. Equal-rank and cyclic groups also advance along +x; authored anchors
+provide a deterministic tie-break. Review scopes filter one cached whole-codebase
+layout instead of laying out their subsets independently.
+
 The map is isometric: `screen.x = (x-y)·31`, `screen.y = (x+y)·15.5 − z`. Two consequences:
 **+x goes right-and-down, +y goes left-and-down.** A flow reads best along +x.
 

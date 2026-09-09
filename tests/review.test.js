@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
-const { createReview: generateReview, owns } = require('../scripts/review');
+const { createReview: generateReview, changedFiles, owns } = require('../scripts/review');
 const { validateData } = require('../scripts/data');
 function createReview(...args) { const data=generateReview(...args);assert.deepEqual(validateData(data).errors,[]);return data; }
 function fixture(t) {
@@ -33,7 +33,7 @@ test('maps rename old paths, deletion, binary and unmapped files with exact coun
     f.write('binary.dat', Buffer.from([0, 1, 2])); f.write('new.txt', 'new\n');
     const head = f.commit();
     const review = createReview(f.atlasFile, { repo: f.repo, base: f.base, head }).META.review;
-    assert.deepEqual(review.files.find(f => f.path === 'renamed.js'), { path: 'renamed.js', oldPath: 'service.js', status: 'renamed', additions: 0, deletions: 0 });
+    assert.deepEqual(review.files.find(f => f.path === 'renamed.js'), { path: 'renamed.js', oldPath: 'service.js', status: 'renamed', additions: 0, deletions: 0, hunks: [] });
     assert.equal(review.files.find(f => f.path === 'gone.js').status, 'deleted');
     assert.equal(review.files.find(f => f.path === 'binary.dat').additions, null);
     assert.deepEqual(review.nodes.service, { status: 'modified', files: ['renamed.js'] });
@@ -94,4 +94,78 @@ test('base snapshot marks newly authored components as added', t => {
     const review = createReview(f.atlasFile, { repo: f.repo, base: f.base, head, baseAtlas }).META.review;
     assert.equal(review.nodes.new.status, 'added');
     assert.deepEqual(review.edges, [{ from: 'service', to: 'new', status: 'added' }]);
+});
+test('matches only changed ranges against the corresponding revision, including edge evidence', t => {
+    const f = fixture(t), previous = structuredClone(f.atlas);
+    previous.META.source = { commit: f.base };
+    previous.N[0].evidence = [{ path: 'service.js', startLine: 2, symbol: 'oldHandler' }];
+    const baseAtlas = f.save(previous, 'previous.json');
+    f.write('service.js', 'one\nreplacement\nthree\n'); const head = f.commit();
+    f.atlas.META.source = { commit: head };
+    f.atlas.N[0].evidence = [{ path: 'service.js', startLine: 1 }, { path: 'service.js', startLine: 2, endLine: 3, symbol: 'handler' }];
+    f.atlas.E = [['service', 'service', 0, { kind: 'call', status: 'inferred', evidence: [{ path: 'service.js', startLine: 2 }] }]];
+    f.save();
+    const review = createReview(f.atlasFile, { repo: f.repo, base: f.base, head, baseAtlas }).META.review;
+    assert.deepEqual(review.files.find(file => file.path === 'service.js').hunks, [{ oldStart: 2, oldCount: 1, newStart: 2, newCount: 1 }]);
+    assert.deepEqual(review.evidenceStatus, { head: 'available', base: 'available' });
+    assert.deepEqual(review.evidence, [
+        { type: 'node', node: 'service', path: 'service.js', startLine: 2, endLine: 3, symbol: 'handler', side: 'head' },
+        { type: 'edge', from: 'service', to: 'service', path: 'service.js', startLine: 2, side: 'head' },
+        { type: 'node', node: 'service', path: 'service.js', startLine: 2, symbol: 'oldHandler', side: 'base' }
+    ]);
+});
+test('insertions do not touch adjacent base evidence and deletions do not touch adjacent head evidence', t => {
+    for (const insertion of [true, false]) {
+        const f = fixture(t), previous = structuredClone(f.atlas);
+        previous.META.source = { commit: f.base };
+        previous.N[0].evidence = [{ path: 'service.js', startLine: insertion ? 1 : 2 }];
+        const baseAtlas = f.save(previous, 'previous.json');
+        f.write('service.js', insertion ? 'one\ninserted\ntwo\nthree\n' : 'one\nthree\n'); const head = f.commit();
+        f.atlas.META.source = { commit: head };
+        f.atlas.N[0].evidence = [{ path: 'service.js', startLine: insertion ? 2 : 1 }]; f.save();
+        const review = createReview(f.atlasFile, { repo: f.repo, base: f.base, head, baseAtlas }).META.review;
+        assert.equal(review.evidence.length, 1);
+        assert.equal(review.evidence[0].side, insertion ? 'head' : 'base');
+    }
+});
+test('unversioned evidence cannot claim an exact changed-line match', t => {
+    const f = fixture(t);
+    f.write('service.js', 'replacement\ntwo\nthree\n'); const head = f.commit();
+    f.atlas.N[0].evidence = [{ path: 'service.js', startLine: 1 }]; f.save();
+    const review = createReview(f.atlasFile, { repo: f.repo, base: f.base, head }).META.review;
+    assert.deepEqual(review.evidence, []);
+    assert.deepEqual(review.evidenceStatus, { head: 'unavailable', base: 'unavailable' });
+    assert.equal(review.nodes.service.status, 'modified');
+});
+test('renamed files match old and new evidence paths separately and literal glob characters stay literal', t => {
+    const f = fixture(t), previous = structuredClone(f.atlas);
+    previous.META.source = { commit: f.base };
+    previous.N[0].evidence = [{ path: 'service.js', startLine: 2 }];
+    const baseAtlas = f.save(previous, 'previous.json');
+    const name = 'service[1].js';
+    f.git('mv', 'service.js', name); f.write(name, 'one\nTWO\nthree\n');
+    f.write('service1.js', 'unrelated\n'); const head = f.commit();
+    f.atlas.META.source = { commit: head };
+    f.atlas.N[0].f = [[name, 3]];
+    f.atlas.N[0].evidence = [{ path: name, startLine: 2 }, { path: 'service.js', startLine: 2 }]; f.save();
+    const review = createReview(f.atlasFile, { repo: f.repo, base: f.base, head, baseAtlas }).META.review;
+    assert.equal(review.files.find(file => file.path === name).status, 'renamed');
+    assert.deepEqual(review.evidence.map(e => [e.path, e.side]), [[name, 'head'], ['service.js', 'base']]);
+});
+test('moving then recreating a path preserves the distinct changes reported by Git', t => {
+    const f = fixture(t);
+    f.git('mv', 'service.js', 'renamed.js'); f.write('renamed.js', 'one\nTWO\nthree\n');
+    f.write('service.js', 'a different implementation\nwith another line\n'); const head = f.commit();
+    const files = changedFiles(f.repo, f.base, head);
+    assert.deepEqual(files.find(file => file.path === 'renamed.js').hunks, [{ oldStart: 0, oldCount: 0, newStart: 1, newCount: 3 }]);
+    assert.deepEqual(files.find(file => file.path === 'service.js').hunks, [{ oldStart: 1, oldCount: 3, newStart: 1, newCount: 2 }]);
+});
+test('dirty snapshots do not imply exact evidence matches even when commit is recorded', t => {
+    const f = fixture(t);
+    f.write('service.js', 'replacement\ntwo\nthree\n'); const head = f.commit();
+    f.atlas.META.source = { commit: head, dirty: true };
+    f.atlas.N[0].evidence = [{ path: 'service.js', startLine: 1 }]; f.save();
+    const review = createReview(f.atlasFile, { repo: f.repo, base: f.base, head }).META.review;
+    assert.equal(review.evidenceStatus.head, 'unavailable');
+    assert.deepEqual(review.evidence, []);
 });

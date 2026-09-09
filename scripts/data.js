@@ -248,11 +248,14 @@ function validateData(d) {
             for (const f of r.files) {
                 if (!obj(f) || !safe(f.path) || changedPaths.has(f.path) || (f.oldPath !== undefined && !safe(f.oldPath)) || !['added', 'deleted', 'renamed', 'copied', 'modified'].includes(f.status) || ![f.additions, f.deletions].every(v => v === null || count(v))) bad(label + ': invalid changed file');
                 else changedPaths.add(f.path);
+                if (obj(f) && f.hunks !== undefined && (!Array.isArray(f.hunks) || !f.hunks.every(h => obj(h) && ['oldStart','oldCount','newStart','newCount'].every(k => count(h[k]))))) bad(label + ': invalid changed-line ranges');
             }
             for (const [id, change] of Object.entries(r.nodes)) {
                 if (!reviewIds.has(id) || !obj(change) || !['added', 'modified', 'removed'].includes(change.status) || !Array.isArray(change.files) || !change.files.every(p => changedPaths.has(p))) bad(label + ': invalid component change ' + id);
             }
             if (!r.unmapped.every(p => changedPaths.has(p))) bad(label + ': invalid unmapped path');
+            if (r.evidenceStatus !== undefined && (!obj(r.evidenceStatus) || !['head','base'].every(side => ['available','unavailable'].includes(r.evidenceStatus[side])))) bad(label + ': invalid evidence availability');
+            if (r.evidence !== undefined && (!Array.isArray(r.evidence) || !r.evidence.every(e => obj(e) && ['head','base'].includes(e.side) && safe(e.path) && Number.isSafeInteger(e.startLine) && e.startLine>0 && (e.endLine===undefined || Number.isSafeInteger(e.endLine) && e.endLine>=e.startLine) && (e.symbol===undefined || str(e.symbol)) && (e.type==='node'?reviewIds.has(e.node):e.type==='edge'&&reviewIds.has(e.from)&&reviewIds.has(e.to))))) bad(label + ': invalid matched evidence');
             if (r.edges !== undefined && (!Array.isArray(r.edges) || !r.edges.every(e => obj(e) && reviewIds.has(e.from) && reviewIds.has(e.to) && ['added', 'modified', 'removed'].includes(e.status)))) bad(label + ': invalid connection changes');
             if (r.prUrl !== undefined) {
                 try { const url = new URL(r.prUrl); if (url.protocol !== 'https:' || url.username || url.password) bad(label + ': invalid PR URL'); }

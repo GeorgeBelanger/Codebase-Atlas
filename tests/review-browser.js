@@ -22,7 +22,20 @@ async function main() {
         page.setDefaultTimeout(10000);
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
+        await page.addInitScript(()=>{
+            window.drawnPositions={};const original=CanvasRenderingContext2D.prototype.fillText;
+            CanvasRenderingContext2D.prototype.fillText=function(text,x,y,...rest){window.drawnPositions[text]=[x,y];return original.call(this,text,x,y,...rest);};
+        });
         await page.goto(`http://127.0.0.1:${server.address().port}/atlas-review.html`);
+        await expect(page.locator('.stage .legend,.stage .hint')).toHaveCount(0);
+        for(let i=0;i<5;i++)await page.locator('#zin').click();
+        await expect.poll(()=>page.evaluate(()=>window.drawnPositions.PAYMENTS||window.drawnPositions.K4)).toBeTruthy();
+        const label=await page.evaluate(()=>window.drawnPositions.PAYMENTS?'PAYMENTS':'K4');
+        const before=await page.evaluate(label=>window.drawnPositions[label],label);
+        await page.locator('#review-scope').selectOption('whole');
+        await page.screenshot({path:path.join(directory,'stable-whole.png')});
+        assert.deepEqual(await page.evaluate(label=>window.drawnPositions[label],label),before,'Scope switch must preserve component screen coordinates');
+        await page.locator('#review-scope').selectOption('changes');
         await expect(page.locator('#review-scope')).toHaveValue('changes');
         await expect(page.locator('#pbody')).toContainText(/fictional/i);
         await expect(page.locator('#pbody .review-summary')).toContainText('4 changed files');

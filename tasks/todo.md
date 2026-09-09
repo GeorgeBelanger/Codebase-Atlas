@@ -1,5 +1,13 @@
 # Data improvements
 
+## Review precision and layout continuity
+
+- [x] Preserve component positions, routes and camera across review scope changes.
+- [x] Advance automatic layout top-left to bottom-right, including cyclic groups.
+- [x] Remove canvas legend and instruction text.
+- [x] Match changed lines to revision-bound node and connection citations.
+- [x] Add orientation, evidence-boundary and browser continuity regressions.
+
 - [x] Normalize file counts, mapped totals and block heights from one inventory.
 - [x] Validate nested data, evidence, geometry and journey continuity; support JSON.
 - [x] Show provenance, source links and confidence in the viewer.
