@@ -3,6 +3,7 @@
 ## Review precision and layout continuity
 
 - [x] Preserve component positions, routes and camera across review scope changes.
+- [x] Default to Authored, synchronize the layout selector, and check geometry across repeated layout switches.
 - [x] Advance automatic layout top-left to bottom-right, including cyclic groups.
 - [x] Remove canvas legend and instruction text.
 - [x] Match changed lines to revision-bound node and connection citations.

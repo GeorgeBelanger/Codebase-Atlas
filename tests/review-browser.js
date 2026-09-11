@@ -28,6 +28,20 @@ async function main() {
         });
         await page.goto(`http://127.0.0.1:${server.address().port}/atlas-review.html`);
         await expect(page.locator('.stage .legend,.stage .hint')).toHaveCount(0);
+        await expect(page.locator('#layout-mode')).toHaveValue('authored');
+        const geometry=()=>page.evaluate(()=>({
+            nodes:layoutScene.map(n=>[n.id,n.x,n.y]),
+            routes:E.map(e=>[e[0],e[1],e.p])
+        }));
+        const authored=await geometry();
+        assert.deepEqual(authored.nodes,await page.evaluate(()=>sourceNodes.map(n=>[n.id,n.x,n.y])), 'Default layout must retain authored coordinates');
+        // Repeat to exercise both fresh projections and the layout cache.
+        for(let i=0;i<2;i++){
+            await page.locator('#layout-mode').selectOption('auto');
+            assert.notDeepEqual((await geometry()).nodes,authored.nodes,'Automatic must compute different positions for this fixture');
+            await page.locator('#layout-mode').selectOption('authored');
+            assert.deepEqual(await geometry(),authored,'Switching back must restore authored positions and routes');
+        }
         for(let i=0;i<5;i++)await page.locator('#zin').click();
         // Wait for the canvas to render the final zoom before comparing scopes.
         await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));

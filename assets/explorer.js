@@ -1,6 +1,6 @@
 // View projection only: original graph, measured counts and journeys stay intact.
 let collapsedGroups=new Set(),reviewScope=review?'changes':'whole',showContext=true;
-let layoutMode='auto',scopeIds=null;
+let layoutMode='authored',scopeIds=null;
 let layoutScene=[],layoutCache=new Map();
 function componentChange(n){
   if(!review)return null;
@@ -33,6 +33,7 @@ function rebuildView(refit=true){
   if(sel&&!byId[sel])sel=null;
   hov=null;hoverEdge=null;selectedEdge=null;liveEdge=null;
   const mode=document.getElementById('review-scope');if(mode)mode.value=reviewScope;
+  const layoutControl=document.getElementById('layout-mode');if(layoutControl)layoutControl.value=layoutMode;
   rail.querySelectorAll('.group-toggle').forEach(b=>{
     const closed=collapsedGroups.has(b.dataset.g);b.setAttribute('aria-expanded',String(!closed));
     b.setAttribute('aria-label',(closed?'Expand ':'Collapse ')+G[b.dataset.g].n);
@@ -89,7 +90,7 @@ function reviewEvidenceHTML(hits){
 function bindReviewLinks(){pbody.querySelectorAll('[data-review-node]').forEach(b=>b.addEventListener('click',()=>inspect(b.dataset.reviewNode)));}
 function initExplorer(){
   const controls=document.createElement('div');controls.className='explorer-controls';controls.innerHTML=`
-    <label>Layout <select id="layout-mode" aria-label="Map layout"><option value="auto">Automatic</option><option value="authored">Authored</option></select></label>
+    <label>Layout <select id="layout-mode" aria-label="Map layout" autocomplete="off"><option value="authored">Authored</option><option value="auto">Automatic</option></select></label>
     <button class="rbtn" id="collapse-groups">System overview</button><button class="rbtn" id="expand-groups">All components</button>
     ${review?`<label>Review <select id="review-scope" aria-label="Review scope"><option value="changes">PR changes</option><option value="whole">Whole codebase</option></select></label><label><input id="review-context" type="checkbox" checked> Dependency context</label><button class="rbtn" id="review-summary">Review summary</button>`:''}`;
   document.querySelector('.stage').prepend(controls);

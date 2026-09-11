@@ -1,5 +1,10 @@
 # Laying out the grid
 
+The viewer starts in Authored layout, preserving the dataset's saved positions.
+Automatic recomputes placement from dependencies and groups. Datasets without
+complete positions receive automatic placement during normalization, so their
+saved layout may already match Automatic.
+
 Automatic placement uses the same top-left to bottom-right reading direction as the
 authored flow. Equal-rank and cyclic groups also advance along +x; authored anchors
 provide a deterministic tie-break. Review scopes filter one cached whole-codebase
